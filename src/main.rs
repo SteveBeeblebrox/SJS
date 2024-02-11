@@ -1,40 +1,44 @@
-use std::panic;
-
 use backtrace::Backtrace;
 use deno_core::error::AnyError;
 
-use clap::{Arg, App};
+use clap::{Arg, Command, ArgAction};
+
+use sjs::ScriptSource;
+
+use std::panic;
+use std::io;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), AnyError> {
-
-    let matches = App::new("SJS")
+    let matches = Command::new("SJS")
         .version(clap::crate_version!())
-        .version_short("v")
         .author(clap::crate_authors!())
-        .about("A simple JavaScript runtime")
+        .before_help(format!("SJS {}\n{}\n{}", clap::crate_version!(), clap::crate_authors!(), "A simple JavaScript runtime"))
 
-        .arg(Arg::with_name("input-name")
-            .short("i")
-            .long("input-name")
-            .value_name("INPUT-NAME")
-            .help("Sets the file name for the input when reading from stdin (ignored otherwise)")
-            .takes_value(true)
+        // Use '-v' instead of '-V' for the short version flag
+        .disable_version_flag(true)
+        .arg(Arg::new("version")
+            .short('v')
+            .long("version")
+            .action(ArgAction::Version)
+            .help("Print version")
         )
 
-        .arg(Arg::with_name("verbose")
-            .short("V")
+        .arg(Arg::new("verbose")
+            .short('V')
             .long("verbose")
             .help("Prints verbose error messages")
+            .action(ArgAction::SetTrue)
         )
 
-        .arg(Arg::with_name("INPUT")
-            .help("Sets the input file to execute (Leave blank or set to '-' to read from stdin)")
-            .index(1)
-        )
+        .external_subcommand_value_parser(clap::value_parser!(String))
+        .allow_external_subcommands(true)
+        .subcommand_value_name("SOURCE")
+
         .get_matches();
 
-    let verbose = matches.occurrences_of("verbose") > 0;
+    
+    let verbose = matches.get_flag("verbose");
     if cfg!(not(debug_assertions)) {
         panic::set_hook(Box::new(move |info| {
             eprintln!("\x1b[93merror\x1b[0m: {}", panic_message::panic_info_message(info));
@@ -47,5 +51,21 @@ async fn main() -> Result<(), AnyError> {
         }));
     }
 
-    sjs::run().await
+    let (source, args) = match matches.subcommand() {
+        Some(("-", args)) => {
+            (ScriptSource::Text(read_stdin()), args.get_many::<String>("").unwrap_or_default().map(|s| s.to_string()).collect())
+        }
+        Some((input, args)) => {
+            (ScriptSource::File(input.to_string()), args.get_many::<String>("").unwrap_or_default().map(|s| s.to_string()).collect())
+        }
+        _ => {
+            (ScriptSource::Text(read_stdin()), vec![])
+        }
+    };
+
+    sjs::run(source, args).await    
+}
+
+fn read_stdin() -> String {
+    return io::read_to_string(io::stdin()).expect("Error reading stdin")
 }

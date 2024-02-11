@@ -9,11 +9,22 @@ use deno_core::ModuleSpecifier;
 use deno_runtime::permissions::PermissionsContainer;
 use deno_runtime::worker::MainWorker;
 use deno_runtime::worker::WorkerOptions;
+use deno_runtime::BootstrapOptions;
+
+use velcro::vec;
 
 static CLI_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/CLI_SNAPSHOT.bin"));
 
-pub async fn run() -> Result<(), AnyError> {
+pub enum ScriptSource {
+    File(String),
+    Text(String)
+}
+
+pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError> {
+    let runtime_version = env!("CARGO_PKG_VERSION");
+    let user_agent = format!("sjs/{runtime_version}");
+
     let js_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src/main.js");
     let main_module = ModuleSpecifier::from_file_path(js_path).unwrap();
@@ -21,6 +32,11 @@ pub async fn run() -> Result<(), AnyError> {
         main_module.clone(),
         PermissionsContainer::allow_all(),
         WorkerOptions {
+            bootstrap: BootstrapOptions {
+                user_agent,
+                args: vec!["<input file name>".to_string(), ..args],
+                ..Default::default()
+            },
             module_loader: Rc::new(FsModuleLoader),
             extensions: vec![],
             startup_snapshot: Some(Snapshot::Static(CLI_SNAPSHOT)),
