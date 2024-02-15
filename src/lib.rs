@@ -25,6 +25,11 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
     let runtime_version = env!("CARGO_PKG_VERSION");
     let user_agent = format!("sjs/{runtime_version}");
 
+    let source_name = match input {
+        ScriptSource::File(path) => path,
+        _ => String::new()
+    };
+
     let js_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src/main.js");
     let main_module = ModuleSpecifier::from_file_path(js_path).unwrap();
@@ -34,7 +39,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         WorkerOptions {
             bootstrap: BootstrapOptions {
                 user_agent,
-                args: vec!["<input file name>".to_string(), ..args],
+                args: vec![source_name, ..args],
                 ..Default::default()
             },
             module_loader: Rc::new(FsModuleLoader),
