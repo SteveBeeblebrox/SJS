@@ -30,6 +30,11 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         _ => String::new()
     };
 
+    let sjs_storage_dir = match home::home_dir() {
+        Some(path) if !path.as_os_str().is_empty() => Some(path.join(".sjs")),
+        _ => None,
+    };
+
     let js_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src/main.js");
     let main_module = ModuleSpecifier::from_file_path(js_path).unwrap();
@@ -45,6 +50,8 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
             module_loader: Rc::new(FsModuleLoader),
             extensions: vec![],
             startup_snapshot: Some(Snapshot::Static(CLI_SNAPSHOT)),
+            // cache_storage_dir: std::env::temp_dir(),
+            origin_storage_dir: sjs_storage_dir,
             ..Default::default()
         },
     );

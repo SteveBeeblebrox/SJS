@@ -4423,6 +4423,7 @@ dependencies = [
  "clap",
  "deno_core",
  "deno_runtime",
+ "home",
  "panic-message",
  "tokio",
  "velcro",
