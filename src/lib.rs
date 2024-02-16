@@ -3,15 +3,16 @@ use std::rc::Rc;
 
 use deno_core::error::AnyError;
 use deno_core::Snapshot;
-
-use deno_runtime::deno_core::FsModuleLoader;
 use deno_core::ModuleSpecifier;
+
 use deno_runtime::permissions::PermissionsContainer;
 use deno_runtime::worker::MainWorker;
 use deno_runtime::worker::WorkerOptions;
 use deno_runtime::BootstrapOptions;
 
 use velcro::vec;
+
+mod util;
 
 static CLI_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/CLI_SNAPSHOT.bin"));
@@ -22,9 +23,6 @@ pub enum ScriptSource {
 }
 
 pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError> {
-    let runtime_version = env!("CARGO_PKG_VERSION");
-    let user_agent = format!("sjs/{runtime_version}");
-
     let source_name = match input {
         ScriptSource::File(path) => path,
         _ => String::new()
@@ -43,11 +41,13 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         PermissionsContainer::allow_all(),
         WorkerOptions {
             bootstrap: BootstrapOptions {
-                user_agent,
+                user_agent: util::get_user_agent(),
                 args: vec![source_name, ..args],
                 ..Default::default()
             },
-            module_loader: Rc::new(FsModuleLoader),
+            module_loader: Rc::new(util::SJSModuleLoader {
+
+            }),
             extensions: vec![],
             startup_snapshot: Some(Snapshot::Static(CLI_SNAPSHOT)),
             // cache_storage_dir: std::env::temp_dir(),

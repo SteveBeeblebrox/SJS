@@ -842,6 +842,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_cache_dir"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bbb245d9a3719b5eb2b5195aaaa25108c3c93d1762b181a20fb1af1c7703eaf"
+dependencies = [
+ "anyhow",
+ "deno_media_type",
+ "indexmap",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "ring",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "deno_canvas"
 version = "0.5.0"
 dependencies = [
@@ -992,6 +1011,32 @@ dependencies = [
  "serde",
  "tokio",
  "winapi",
+]
+
+[[package]]
+name = "deno_graph"
+version = "0.64.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0eb6ad784fa5885867ba00e0db8ddcb2d98a4a0234fe336d50a13092e268c44"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "data-url",
+ "deno_ast",
+ "deno_semver",
+ "encoding_rs",
+ "futures",
+ "import_map",
+ "indexmap",
+ "log",
+ "monch",
+ "once_cell",
+ "parking_lot",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -1265,6 +1310,19 @@ dependencies = [
  "winapi",
  "windows-sys 0.48.0",
  "winres",
+]
+
+[[package]]
+name = "deno_semver"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49e14effd9df8ed261f7a1a34ac19bbaf0fa940c59bd19a6d8313cf41525e1c"
+dependencies = [
+ "monch",
+ "once_cell",
+ "serde",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -2501,6 +2559,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "import_map"
+version = "0.18.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "395c0451cc0c753468afabbe4aec1538afe88769889ef50e39c035ca2edbfa43"
+dependencies = [
+ "indexmap",
+ "log",
+ "percent-encoding",
+ "serde",
+ "serde_json",
+ "url",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2979,6 +3051,12 @@ dependencies = [
  "wasi",
  "windows-sys 0.48.0",
 ]
+
+[[package]]
+name = "monch"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 
 [[package]]
 name = "multimap"
@@ -4420,10 +4498,17 @@ name = "sjs"
 version = "0.1.0"
 dependencies = [
  "backtrace",
+ "base64",
+ "cache_control",
+ "chrono",
  "clap",
+ "deno_ast",
+ "deno_cache_dir",
  "deno_core",
+ "deno_graph",
  "deno_runtime",
  "home",
+ "once_cell",
  "panic-message",
  "tokio",
  "velcro",
