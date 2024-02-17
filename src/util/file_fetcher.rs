@@ -41,8 +41,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 
-pub const SUPPORTED_SCHEMES: [&str; 5] =
-  ["data", "blob", "file", "http", "https"];
+pub const SUPPORTED_SCHEMES: [&str; 6] =
+  ["data", "blob", "file", "http", "https", "sjs"];
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TextDecodedFile {
@@ -476,7 +476,7 @@ impl FileFetcher {
     options.permissions.check_specifier(specifier)?;
     if let Some(file) = self.cache.get(specifier) {
       Ok(file)
-    } else if scheme == "file" {
+    } else if scheme == "file" || scheme == "sjs" {
       // we do not in memory cache files, as this would prevent files on the
       // disk changing effecting things like workers and dynamic imports.
       fetch_local(specifier)

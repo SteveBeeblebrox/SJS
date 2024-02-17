@@ -13,6 +13,8 @@ use deno_core::ModuleLoadResponse;
 use deno_core::futures::FutureExt;
 use deno_runtime::permissions::PermissionsContainer;
 
+use std::path::Path;
+
 use crate::util::FileFetcher;
 
 pub struct SJSModuleLoader {
@@ -37,52 +39,36 @@ impl ModuleLoader for SJSModuleLoader {
       requested_module_type: RequestedModuleType,
     ) -> ModuleLoadResponse {
       let module_specifier = module_specifier.clone();
-      let fut = async move {
-        let path = module_specifier.to_file_path().map_err(|_| {
-          generic_error(format!(
-            "Provided module specifier \"{module_specifier}\" is not a file URL."
-          ))
-        })?;
-        let module_type = if let Some(extension) = path.extension() {
-          let ext = extension.to_string_lossy().to_lowercase();
-          // We only return JSON modules if extension was actually `.json`.
-          // In other cases we defer to actual requested module type, so runtime
-          // can decide what to do with it.
-          if ext == "json" {
-            ModuleType::Json
-          } else {
-            match &requested_module_type {
-              RequestedModuleType::Other(ty) => ModuleType::Other(ty.clone()),
-              _ => ModuleType::JavaScript,
+      let file_fetcher = self.file_fetcher.clone();
+      return ModuleLoadResponse::Async(
+        async move {
+          let module_type = if let Some(extension) = Path::new(&module_specifier.path()).extension() {
+            let ext = extension.to_string_lossy().to_lowercase();
+            if ext == "json" {
+              ModuleType::Json
+            } else {
+              match &requested_module_type {
+                RequestedModuleType::Other(ty) => ModuleType::Other(ty.clone()),
+                _ => ModuleType::JavaScript,
+              }
             }
+          } else {
+            ModuleType::JavaScript
+          };
+
+          if module_type == ModuleType::Json && requested_module_type != RequestedModuleType::Json
+          {
+            return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement."));
           }
-        } else {
-          ModuleType::JavaScript
-        };
-  
-        // If we loaded a JSON file, but the "requested_module_type" (that is computed from
-        // import attributes) is not JSON we need to fail.
-        if module_type == ModuleType::Json
-          && requested_module_type != RequestedModuleType::Json
-        {
-          return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement."));
-        }
-  
-        let code = std::fs::read(path).with_context(|| {
-          format!("Failed to load {}", module_specifier.as_str())
-        })?;
 
-        // self.file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.unwrap().source;
-
-        let module = ModuleSource::new(
-          module_type,
-          ModuleSourceCode::Bytes(code.into_boxed_slice().into()),
-          &module_specifier,
-        );
-        Ok(module)
-      }
-      .boxed_local();
-  
-      ModuleLoadResponse::Async(fut)
+          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.unwrap().source.clone();
+          // TODO mtsc transform code here
+          Ok(ModuleSource::new(
+            module_type,
+            ModuleSourceCode::Bytes(code.into()),
+            &module_specifier,
+          ))
+        }.boxed_local()
+      )
     }
   }

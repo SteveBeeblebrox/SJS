@@ -25,7 +25,8 @@ static CLI_SNAPSHOT: &[u8] =
 #[derive(Clone)]
 pub enum ScriptSource {
     File(String),
-    Text(String)
+    Text(String),
+    URL(String)
 }
 
 pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError> {
@@ -47,8 +48,6 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         Default::default(),
     );
 
-    // file_fetcher.fetch(specifier,permissions)
-
     let main_module = match input {
         ScriptSource::Text(source_text) => {
             let main_module = ModuleSpecifier::parse("sjs://text").unwrap();
@@ -62,6 +61,9 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         }
         ScriptSource::File(source_path) => {
             ModuleSpecifier::from_file_path(Path::new(&source_path).canonicalize().unwrap().as_path()).unwrap()
+        }
+        ScriptSource::URL(source_url) => {
+            ModuleSpecifier::parse(&source_url).unwrap()
         }
     };
 

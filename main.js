@@ -1,7 +1,7 @@
 //console.log(`Hello sjs v${0}`);
 //console.log(await (await fetch('https://g.co')).text())
 
-// import { copy } from "https://deno.land/std@0.215.0/fs/copy.ts";
+//import { copy } from "https://deno.land/std@0.215.0/fs/copy.ts";
 
 
 console.log(globalThis['system'].version)
