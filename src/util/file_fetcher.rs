@@ -619,7 +619,7 @@ async fn fetch_once(
     return Err(err);
   }
 
-  let body = http_util::get_response_body_with_progress(
+  let body = http_util::get_response_body(
     response
   )
   .await?;

@@ -1,8 +1,7 @@
 // From deno:cli/http_util.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 use cache_control::{Cachability,CacheControl};
-use deno_core::anyhow::bail;
-use deno_core::error::{custom_error,generic_error,AnyError};
+use deno_core::error::{generic_error,AnyError};
 use deno_core::url::Url;
 use deno_runtime::deno_fetch::create_http_client;
 use deno_runtime::deno_fetch::reqwest;
@@ -240,17 +239,6 @@ impl HttpClient {
     }
   }
 
-  #[cfg(test)]
-  pub fn from_client(client: reqwest::Client) -> Self {
-    let result = Self {
-      options: Default::default(),
-      root_cert_store_provider: Default::default(),
-      cell: Default::default(),
-    };
-    result.cell.set(client).unwrap();
-    result
-  }
-
   pub(crate) fn client(&self) -> Result<&reqwest::Client, AnyError> {
     self.cell.get_or_try_init(|| {
       create_http_client(
@@ -273,87 +261,9 @@ impl HttpClient {
   ) -> Result<reqwest::RequestBuilder, AnyError> {
     Ok(self.client()?.get(url))
   }
-
-  pub async fn download_text<U: reqwest::IntoUrl>(
-    &self,
-    url: U,
-  ) -> Result<String, AnyError> {
-    let bytes = self.download(url).await?;
-    Ok(String::from_utf8(bytes)?)
-  }
-
-  pub async fn download<U: reqwest::IntoUrl>(
-    &self,
-    url: U,
-  ) -> Result<Vec<u8>, AnyError> {
-    let maybe_bytes = self.inner_download(url).await?;
-    match maybe_bytes {
-      Some(bytes) => Ok(bytes),
-      None => Err(custom_error("Http", "Not found.")),
-    }
-  }
-
-  pub async fn download_with_progress<U: reqwest::IntoUrl>(
-    &self,
-    url: U,
-  ) -> Result<Option<Vec<u8>>, AnyError> {
-    self.inner_download(url).await
-  }
-
-  async fn inner_download<U: reqwest::IntoUrl>(
-    &self,
-    url: U,
-  ) -> Result<Option<Vec<u8>>, AnyError> {
-    let response = self.get_redirected_response(url).await?;
-
-    if response.status() == 404 {
-      return Ok(None);
-    } else if !response.status().is_success() {
-      let status = response.status();
-      let maybe_response_text = response.text().await.ok();
-      bail!(
-        "Bad response: {:?}{}",
-        status,
-        match maybe_response_text {
-          Some(text) => format!("\n\n{text}"),
-          None => String::new(),
-        }
-      );
-    }
-
-    get_response_body_with_progress(response)
-      .await
-      .map(Some)
-  }
-
-  pub async fn get_redirected_response<U: reqwest::IntoUrl>(
-    &self,
-    url: U,
-  ) -> Result<Response, AnyError> {
-    let mut url = url.into_url()?;
-    let mut response = self.get_no_redirect(url.clone())?.send().await?;
-    let status = response.status();
-    if status.is_redirection() {
-      for _ in 0..5 {
-        let new_url = resolve_redirect_from_response(&url, &response)?;
-        let new_response =
-          self.get_no_redirect(new_url.clone())?.send().await?;
-        let status = new_response.status();
-        if status.is_redirection() {
-          response = new_response;
-          url = new_url;
-        } else {
-          return Ok(new_response);
-        }
-      }
-      Err(custom_error("Http", "Too many redirects."))
-    } else {
-      Ok(response)
-    }
-  }
 }
 
-pub async fn get_response_body_with_progress(
+pub async fn get_response_body(
   response: reqwest::Response,
 ) -> Result<Vec<u8>, AnyError> {
   let bytes = response.bytes().await?;
