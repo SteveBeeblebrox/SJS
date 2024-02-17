@@ -1,6 +1,6 @@
 use deno_core::{
-  ModuleSpecifier, ModuleCodeString, ModuleSource, ModuleType, RequestedModuleType,
-  ResolutionKind, resolve_import, ModuleSourceCode, ModuleLoader, ModuleLoadResponse
+  ModuleSpecifier, ModuleSource, ModuleType, RequestedModuleType, ResolutionKind,
+  resolve_import, ModuleSourceCode, ModuleLoader, ModuleLoadResponse
 };
 use deno_core::anyhow::Error;
 use deno_core::error::generic_error;

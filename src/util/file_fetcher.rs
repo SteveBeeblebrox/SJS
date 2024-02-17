@@ -1,40 +1,32 @@
 // From deno:cli/file_fetcher.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 
-use deno_cache_dir::HttpCache;
 use crate::util::cache_settings::CacheSetting;
 
-use crate::util::auth_tokens::AuthToken;
-use crate::util::auth_tokens::AuthTokens;
+use crate::util::auth_tokens::{AuthToken,AuthTokens};
 
 use crate::util::http_util;
-use crate::util::http_util::resolve_redirect_from_response;
-use crate::util::http_util::CacheSemantics;
-use crate::util::http_util::HeadersMap;
-use crate::util::http_util::HttpClient;
+use crate::util::http_util::{resolve_redirect_from_response,CacheSemantics,HeadersMap,HttpClient};
+
+use deno_cache_dir::HttpCache;
 
 use deno_ast::MediaType;
+
 use deno_core::anyhow::Context;
-use deno_core::error::custom_error;
-use deno_core::error::generic_error;
-use deno_core::error::uri_error;
-use deno_core::error::AnyError;
+use deno_core::error::{custom_error,generic_error,uri_error,AnyError};
 use deno_core::futures;
 use deno_core::futures::future::FutureExt;
 use deno_core::parking_lot::Mutex;
 use deno_core::url::Url;
 use deno_core::ModuleSpecifier;
-use deno_runtime::deno_fetch::reqwest::header::HeaderValue;
-use deno_runtime::deno_fetch::reqwest::header::ACCEPT;
-use deno_runtime::deno_fetch::reqwest::header::AUTHORIZATION;
-use deno_runtime::deno_fetch::reqwest::header::IF_NONE_MATCH;
+
+use deno_runtime::deno_fetch::reqwest::header::{IF_NONE_MATCH,AUTHORIZATION,ACCEPT,HeaderValue};
 use deno_runtime::deno_fetch::reqwest::StatusCode;
 use deno_runtime::deno_web::BlobStore;
 use deno_runtime::permissions::PermissionsContainer;
 
+use std::{env,fs};
 use std::collections::HashMap;
-use std::env;
-use std::fs;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
@@ -65,6 +57,7 @@ pub struct File {
   pub source: Arc<[u8]>,
 }
 
+#[allow(unused)]
 impl File {
   pub fn resolve_media_type_and_charset(&self) -> (MediaType, Option<&str>) {
     deno_graph::source::resolve_media_type_and_charset_from_headers(
@@ -164,6 +157,7 @@ pub struct FileFetcher {
   blob_store: Arc<BlobStore>,
 }
 
+#[allow(unused)]
 impl FileFetcher {
   pub fn new(
     http_cache: Arc<dyn HttpCache>,
@@ -512,7 +506,7 @@ impl FileFetcher {
   pub fn get_source(&self, specifier: &ModuleSpecifier) -> Option<File> {
     let maybe_file = self.cache.get(specifier);
     if maybe_file.is_none() {
-      let is_local = specifier.scheme() == "file";
+      let is_local = specifier.scheme() == "file" || specifier.scheme() == "sjs";
       if is_local {
         if let Ok(file) = fetch_local(specifier) {
           return Some(file);

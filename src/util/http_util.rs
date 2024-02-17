@@ -1,13 +1,8 @@
 // From deno:cli/http_util.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
-use cache_control::Cachability;
-use cache_control::CacheControl;
-use chrono::DateTime;
+use cache_control::{Cachability,CacheControl};
 use deno_core::anyhow::bail;
-use deno_core::error::custom_error;
-use deno_core::error::generic_error;
-use deno_core::error::AnyError;
-use deno_core::futures::StreamExt;
+use deno_core::error::{custom_error,generic_error,AnyError};
 use deno_core::url::Url;
 use deno_runtime::deno_fetch::create_http_client;
 use deno_runtime::deno_fetch::reqwest;
@@ -17,8 +12,8 @@ use deno_runtime::deno_fetch::CreateHttpClientOptions;
 use deno_runtime::deno_tls::RootCertStoreProvider;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
-use std::time::SystemTime;
+use std::time::{Duration,SystemTime};
+use chrono::DateTime;
 
 /// Construct the next uri based on base uri and location header fragment
 /// See <https://tools.ietf.org/html/rfc3986#section-4.2>
