@@ -11,9 +11,12 @@ use deno_core::anyhow::{Error,Context};
 use deno_core::ModuleLoader;
 use deno_core::ModuleLoadResponse;
 use deno_core::futures::FutureExt;
+use deno_runtime::permissions::PermissionsContainer;
+
+use crate::util::FileFetcher;
 
 pub struct SJSModuleLoader {
-  // map: HashMap<ModuleSpecifier, ModuleCodeString>,
+  pub file_fetcher: FileFetcher
 }
 
 impl ModuleLoader for SJSModuleLoader {
@@ -68,6 +71,9 @@ impl ModuleLoader for SJSModuleLoader {
         let code = std::fs::read(path).with_context(|| {
           format!("Failed to load {}", module_specifier.as_str())
         })?;
+
+        // self.file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.unwrap().source;
+
         let module = ModuleSource::new(
           module_type,
           ModuleSourceCode::Bytes(code.into_boxed_slice().into()),

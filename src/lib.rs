@@ -10,20 +10,26 @@ use deno_runtime::worker::MainWorker;
 use deno_runtime::worker::WorkerOptions;
 use deno_runtime::BootstrapOptions;
 
+use deno_cache_dir::GlobalHttpCache;
+
+use std::sync::Arc;
+
 use velcro::vec;
 
 mod util;
+use util::{FileFetcher,File,SJSModuleLoader,CacheSetting,SJSCacheEnv,HttpClient};
 
 static CLI_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/CLI_SNAPSHOT.bin"));
 
+#[derive(Clone)]
 pub enum ScriptSource {
     File(String),
     Text(String)
 }
 
 pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError> {
-    let source_name = match input {
+    let source_name = match input.clone() {
         ScriptSource::File(path) => path,
         _ => String::new()
     };
@@ -33,9 +39,32 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         _ => None,
     };
 
-    let js_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src/main.js");
-    let main_module = ModuleSpecifier::from_file_path(js_path).unwrap();
+    let file_fetcher = FileFetcher::new(
+        Arc::new(GlobalHttpCache::<SJSCacheEnv>::new(sjs_storage_dir.clone().unwrap_or(std::env::temp_dir()).join("libs"), SJSCacheEnv)),
+        CacheSetting::Use,
+        true,
+        Arc::new(HttpClient::new(Default::default(),None)),
+        Default::default(),
+    );
+
+    // file_fetcher.fetch(specifier,permissions)
+
+    let main_module = match input {
+        ScriptSource::Text(source_text) => {
+            let main_module = ModuleSpecifier::parse("sjs://text").unwrap();
+            let bytes: Vec<u8> = source_text.into();
+            file_fetcher.insert_cached(File {
+                specifier: main_module.clone(),
+                maybe_headers: None,
+                source: bytes.into(),
+            });
+            main_module
+        }
+        ScriptSource::File(source_path) => {
+            ModuleSpecifier::from_file_path(Path::new(&source_path).canonicalize().unwrap().as_path()).unwrap()
+        }
+    };
+
     let mut worker = MainWorker::bootstrap_from_options(
         main_module.clone(),
         PermissionsContainer::allow_all(),
@@ -45,9 +74,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
                 args: vec![source_name, ..args],
                 ..Default::default()
             },
-            module_loader: Rc::new(util::SJSModuleLoader {
-
-            }),
+            module_loader: Rc::new(SJSModuleLoader {file_fetcher}),
             extensions: vec![],
             startup_snapshot: Some(Snapshot::Static(CLI_SNAPSHOT)),
             // cache_storage_dir: std::env::temp_dir(),

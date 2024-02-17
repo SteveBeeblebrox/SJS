@@ -4510,6 +4510,7 @@ dependencies = [
  "home",
  "once_cell",
  "panic-message",
+ "rand",
  "tokio",
  "velcro",
 ]
