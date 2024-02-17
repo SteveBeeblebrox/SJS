@@ -31,6 +31,13 @@ async fn main() -> Result<(), AnyError> {
             .action(ArgAction::SetTrue)
         )
 
+        .arg(Arg::new("clear-cache")
+            .short('c')
+            .long("clear-cache")
+            .help("Clear dependency cache and exit if no source is specified")
+            .action(ArgAction::SetTrue)
+        )
+
         .arg(Arg::new("remote")
             .short('r')
             .long("remote")
@@ -57,6 +64,15 @@ async fn main() -> Result<(), AnyError> {
             }
         }));
     }
+
+    if matches.get_flag("clear-cache") {
+        if let Some(path) = sjs::get_storage_directory() {
+            std::fs::remove_dir_all(path.join("libs")).unwrap();
+        }
+        if matches.subcommand() == None {
+            return Ok(())
+        }
+    };
 
     let (source, args) = match matches.subcommand() {
         Some(("-", args)) => {

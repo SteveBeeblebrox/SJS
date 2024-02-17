@@ -13,13 +13,12 @@ use deno_runtime::BootstrapOptions;
 use deno_cache_dir::GlobalHttpCache;
 
 use std::sync::Arc;
+use std::path::PathBuf;
 
 use velcro::vec;
 
 mod util;
 use util::{FileFetcher,File,SJSModuleLoader,CacheSetting,SJSCacheEnv,HttpClient};
-
-use std::ops::Deref;
 
 static CLI_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/CLI_SNAPSHOT.bin"));
@@ -32,6 +31,13 @@ pub enum ScriptSource {
     FileOrURL(String)
 }
 
+pub fn get_storage_directory() -> Option<PathBuf> {
+    match home::home_dir() {
+        Some(path) if !path.as_os_str().is_empty() => Some(path.join(".sjs")),
+        _ => None,
+    }
+}
+
 pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> Result<(), AnyError> {
     let source_name = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).canonicalize().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap(),
@@ -42,10 +48,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> 
         _ => String::new()
     };
 
-    let sjs_storage_dir = match home::home_dir() {
-        Some(path) if !path.as_os_str().is_empty() => Some(path.join(".sjs")),
-        _ => None,
-    };
+    let sjs_storage_dir = get_storage_directory();
 
     let file_fetcher = FileFetcher::new(
         Arc::new(GlobalHttpCache::<SJSCacheEnv>::new(sjs_storage_dir.clone().unwrap_or(std::env::temp_dir()).join("libs"), SJSCacheEnv)),
@@ -73,7 +76,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> 
             ModuleSpecifier::parse(&source_url).unwrap()
         },
         ScriptSource::FileOrURL(source_path) => {
-            Path::new(&source_path).canonicalize().map(|x| ModuleSpecifier::from_file_path(x.as_path())).unwrap_or(ModuleSpecifier::parse(&source_path).map_err(|x| ())).unwrap()
+            Path::new(&source_path).canonicalize().map(|x| ModuleSpecifier::from_file_path(x.as_path())).unwrap_or(ModuleSpecifier::parse(&source_path).map_err(|_x| ())).unwrap()
         }
     };
 
