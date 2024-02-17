@@ -1,9 +1,7 @@
 // From deno:cli/cache/mod.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 use deno_cache_dir::DenoCacheEnv;
-use deno_core::futures::StreamExt;
 
-use std::sync::Arc;
 use std::time::SystemTime;
 use std::path::Path;
 

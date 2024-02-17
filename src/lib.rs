@@ -1,24 +1,19 @@
-use std::path::Path;
-use std::rc::Rc;
-
+use deno_core::{Snapshot,ModuleSpecifier};
 use deno_core::error::AnyError;
-use deno_core::Snapshot;
-use deno_core::ModuleSpecifier;
-
+use deno_runtime::worker::{MainWorker, WorkerOptions};
 use deno_runtime::permissions::PermissionsContainer;
-use deno_runtime::worker::MainWorker;
-use deno_runtime::worker::WorkerOptions;
 use deno_runtime::BootstrapOptions;
-
 use deno_cache_dir::GlobalHttpCache;
 
+use std::path::{Path,PathBuf};
 use std::sync::Arc;
-use std::path::PathBuf;
+use std::rc::Rc;
 
 use velcro::vec;
 
 mod util;
-use util::{FileFetcher,File,SJSModuleLoader,CacheSetting,SJSCacheEnv,HttpClient};
+use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient};
+use util::CacheSetting;
 
 static CLI_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/CLI_SNAPSHOT.bin"));
@@ -30,6 +25,7 @@ pub enum ScriptSource {
     URL(String),
     FileOrURL(String)
 }
+
 
 pub fn get_storage_directory() -> Option<PathBuf> {
     match home::home_dir() {

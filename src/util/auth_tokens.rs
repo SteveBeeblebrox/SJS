@@ -1,9 +1,9 @@
 // From deno:cli/auth_tokens.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 
+use deno_core::ModuleSpecifier;
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
-use deno_core::ModuleSpecifier;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

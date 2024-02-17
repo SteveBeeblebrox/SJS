@@ -1,17 +1,11 @@
-use deno_core::ModuleSpecifier;
-use deno_core::ModuleCodeString;
-use deno_core::ModuleSource;
-use deno_core::ModuleType;
-use deno_core::RequestedModuleType;
-use deno_core::ResolutionKind;
-use deno_core::resolve_import;
+use deno_core::{
+  ModuleSpecifier, ModuleCodeString, ModuleSource, ModuleType, RequestedModuleType,
+  ResolutionKind, resolve_import, ModuleSourceCode, ModuleLoader, ModuleLoadResponse
+};
+use deno_core::anyhow::Error;
 use deno_core::error::generic_error;
-use deno_core::ModuleSourceCode;
-use deno_core::anyhow::{Error,Context};
-use deno_core::ModuleLoader;
-use deno_core::ModuleLoadResponse;
-use deno_core::futures::FutureExt;
 use deno_runtime::permissions::PermissionsContainer;
+use deno_core::futures::FutureExt;
 
 use std::path::Path;
 

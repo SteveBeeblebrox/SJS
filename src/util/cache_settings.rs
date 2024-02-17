@@ -2,6 +2,7 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 
 /// Indicates how cached source files should be handled.
+#[allow(unused)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CacheSetting {
   /// Only the cached files should be used.  Any files not in the cache will
