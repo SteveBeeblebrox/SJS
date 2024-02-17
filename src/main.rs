@@ -31,6 +31,13 @@ async fn main() -> Result<(), AnyError> {
             .action(ArgAction::SetTrue)
         )
 
+        .arg(Arg::new("remote")
+            .short('r')
+            .long("remote")
+            .help("Allow running and importing URLs")
+            .action(ArgAction::SetTrue)
+        )
+
         .external_subcommand_value_parser(clap::value_parser!(String))
         .allow_external_subcommands(true)
         .subcommand_value_name("SOURCE")
@@ -56,14 +63,14 @@ async fn main() -> Result<(), AnyError> {
             (ScriptSource::Text(read_stdin()), args.get_many::<String>("").unwrap_or_default().map(|s| s.to_string()).collect())
         }
         Some((input, args)) => {
-            (ScriptSource::File(input.to_string()), args.get_many::<String>("").unwrap_or_default().map(|s| s.to_string()).collect())
+            (ScriptSource::FileOrURL(input.to_string()), args.get_many::<String>("").unwrap_or_default().map(|s| s.to_string()).collect())
         }
         _ => {
             (ScriptSource::Text(read_stdin()), vec![])
         }
     };
 
-    sjs::run(source, args).await    
+    sjs::run(source, args, matches.get_flag("remote")).await    
 }
 
 fn read_stdin() -> String {

@@ -487,7 +487,7 @@ impl FileFetcher {
     } else if !self.allow_remote {
       Err(custom_error(
         "NoRemote",
-        format!("A remote specifier was requested: \"{specifier}\", but --no-remote is specified."),
+        format!("A remote specifier was requested: \"{specifier}\", but --remote is not specified."),
       ))
     } else {
       let result = self

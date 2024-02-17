@@ -19,6 +19,8 @@ use velcro::vec;
 mod util;
 use util::{FileFetcher,File,SJSModuleLoader,CacheSetting,SJSCacheEnv,HttpClient};
 
+use std::ops::Deref;
+
 static CLI_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/CLI_SNAPSHOT.bin"));
 
@@ -26,12 +28,17 @@ static CLI_SNAPSHOT: &[u8] =
 pub enum ScriptSource {
     File(String),
     Text(String),
-    URL(String)
+    URL(String),
+    FileOrURL(String)
 }
 
-pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError> {
+pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> Result<(), AnyError> {
     let source_name = match input.clone() {
-        ScriptSource::File(path) => path,
+        ScriptSource::File(source_path) => Path::new(&source_path).canonicalize().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap(),
+        ScriptSource::URL(source_url) => source_url,
+        ScriptSource::FileOrURL(source_path) => {
+            Path::new(&source_path).canonicalize().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap_or(source_path)
+        }
         _ => String::new()
     };
 
@@ -43,7 +50,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
     let file_fetcher = FileFetcher::new(
         Arc::new(GlobalHttpCache::<SJSCacheEnv>::new(sjs_storage_dir.clone().unwrap_or(std::env::temp_dir()).join("libs"), SJSCacheEnv)),
         CacheSetting::Use,
-        true,
+        allow_remote,
         Arc::new(HttpClient::new(Default::default(),None)),
         Default::default(),
     );
@@ -64,6 +71,9 @@ pub async fn run(input: ScriptSource, args: Vec<String>) -> Result<(), AnyError>
         }
         ScriptSource::URL(source_url) => {
             ModuleSpecifier::parse(&source_url).unwrap()
+        },
+        ScriptSource::FileOrURL(source_path) => {
+            Path::new(&source_path).canonicalize().map(|x| ModuleSpecifier::from_file_path(x.as_path())).unwrap_or(ModuleSpecifier::parse(&source_path).map_err(|x| ())).unwrap()
         }
     };
 

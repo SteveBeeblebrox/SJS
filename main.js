@@ -9,9 +9,9 @@ console.log(globalThis['system'].version)
 console.log(`Args: ${system.args}`)
 
 
-system.test('basic test', function() {
-    throw new Error('ahhhhh!')
-});
+// system.test('basic test', function() {
+//     throw new Error('ahhhhh!')
+// });
 
-// localStorage.setItem('foo',1)
-console.log(localStorage.getItem('foo'))
+// // localStorage.setItem('foo',1)
+// console.log(localStorage.getItem('foo'))
