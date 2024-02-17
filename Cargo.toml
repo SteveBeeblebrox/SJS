@@ -23,6 +23,7 @@ deno_ast = { version = "0.32.0", features = ["transpiling"] }
 deno_graph = "=0.64.1"
 deno_cache_dir = "=0.6.1"
 rand = "0.8.5"
+or_panic = { git = "https://github.com/SteveBeeblebrox/or_panic.git" }
 
 [build-dependencies]
 deno_core = "*"

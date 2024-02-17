@@ -3316,6 +3316,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
+name = "or_panic"
+version = "1.0.0"
+source = "git+https://github.com/SteveBeeblebrox/or_panic.git#7be145a16b0206e43964b0230275f3951123b278"
+
+[[package]]
 name = "ordered-float"
 version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4509,6 +4514,7 @@ dependencies = [
  "deno_runtime",
  "home",
  "once_cell",
+ "or_panic",
  "panic-message",
  "rand",
  "tokio",
