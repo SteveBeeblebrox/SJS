@@ -11,6 +11,8 @@ use std::rc::Rc;
 
 use velcro::vec;
 
+use or_panic::OrPanic;
+
 mod util;
 use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient};
 use util::CacheSetting;
@@ -36,7 +38,7 @@ pub fn get_storage_directory() -> Option<PathBuf> {
 
 pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> Result<(), AnyError> {
     let source_name = match input.clone() {
-        ScriptSource::File(source_path) => Path::new(&source_path).canonicalize().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap(),
+        ScriptSource::File(source_path) => Path::new(&source_path).canonicalize().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
         ScriptSource::FileOrURL(source_path) => {
             Path::new(&source_path).canonicalize().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap_or(source_path)
@@ -66,13 +68,13 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> 
             main_module
         }
         ScriptSource::File(source_path) => {
-            ModuleSpecifier::from_file_path(Path::new(&source_path).canonicalize().unwrap().as_path()).unwrap()
+            ModuleSpecifier::from_file_path(Path::new(&source_path).canonicalize().map_err(|x| format!("{}: {}",source_path,x)).or_panic().as_path()).unwrap()
         }
         ScriptSource::URL(source_url) => {
-            ModuleSpecifier::parse(&source_url).unwrap()
+            ModuleSpecifier::parse(&source_url).or_panic()
         },
         ScriptSource::FileOrURL(source_path) => {
-            Path::new(&source_path).canonicalize().map(|x| ModuleSpecifier::from_file_path(x.as_path())).unwrap_or(ModuleSpecifier::parse(&source_path).map_err(|_x| ())).unwrap()
+            Path::new(&source_path).canonicalize().map(|x| ModuleSpecifier::from_file_path(x.as_path()).unwrap()).unwrap_or(ModuleSpecifier::parse(&source_path).map_err(|_x| format!("{}: {}",source_path,"Invalid file or URL")).or_panic())
         }
     };
 

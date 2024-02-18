@@ -5,6 +5,8 @@ use clap::{Arg, Command, ArgAction};
 
 use sjs::ScriptSource;
 
+use or_panic::OrPanic;
+
 use std::panic;
 use std::io;
 
@@ -66,8 +68,8 @@ async fn main() -> Result<(), AnyError> {
     }
 
     if matches.get_flag("clear-cache") {
-        if let Some(path) = sjs::get_storage_directory() {
-            std::fs::remove_dir_all(path.join("libs")).unwrap();
+        if let Some(path) = sjs::get_storage_directory().map(|x| x.join("libs")) {
+            std::fs::remove_dir_all(path.clone()).map_err(|x| format!("{}: {}", path.display(), x)).or_panic();
         }
         if matches.subcommand() == None {
             return Ok(())

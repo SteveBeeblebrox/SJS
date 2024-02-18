@@ -9,6 +9,8 @@ use deno_core::futures::FutureExt;
 
 use std::path::Path;
 
+use or_panic::OrPanic;
+
 use crate::util::FileFetcher;
 
 pub struct SJSModuleLoader {
@@ -55,7 +57,7 @@ impl ModuleLoader for SJSModuleLoader {
             return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement."));
           }
 
-          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.unwrap().source.clone();
+          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.map_err(|x| format!("{}: {}",module_specifier,x)).or_panic().source.clone();
           // TODO mtsc transform code here
           Ok(ModuleSource::new(
             module_type,
