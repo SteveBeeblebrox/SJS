@@ -32,3 +32,9 @@ deno_runtime = "*"
 [patch.crates-io]
 deno_core = { path = "../deno_core/core" }
 deno_runtime = { path = "../deno/runtime" }
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+lto = true
+strip = true
