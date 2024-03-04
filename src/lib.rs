@@ -84,6 +84,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> 
             bootstrap: BootstrapOptions {
                 user_agent: util::get_user_agent(),
                 args: vec![source_name, ..args],
+                unstable_features: (1..=8).collect(), // deno_runtime:lib/.rs UNSTABLE_GRANULAR_FLAGS
                 ..Default::default()
             },
             module_loader: Rc::new(SJSModuleLoader {file_fetcher}),

@@ -1,5 +1,4 @@
 use backtrace::Backtrace;
-use deno_core::error::AnyError;
 
 use clap::{Arg, Command, ArgAction};
 
@@ -11,7 +10,7 @@ use std::panic;
 use std::io;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), AnyError> {
+async fn main() {
     let matches = Command::new("SJS")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
@@ -55,24 +54,22 @@ async fn main() -> Result<(), AnyError> {
 
     
     let verbose = matches.get_flag("verbose");
-    if cfg!(not(debug_assertions)) {
-        panic::set_hook(Box::new(move |info| {
-            eprintln!("\x1b[93merror\x1b[0m: {}", panic_message::panic_info_message(info));
-            
-            if verbose {
-                eprintln!("{:?}", Backtrace::new());
-            } else {
-                eprintln!("rerun with -V for verbose error messages");
-            }
-        }));
-    }
+    panic::set_hook(Box::new(move |info| {
+        eprintln!("\x1b[91;1merror\x1b[0m: {}", panic_message::panic_info_message(info));
+        
+        if verbose {
+            eprintln!("{:?}", Backtrace::new());
+        } else {
+            eprintln!("rerun with -V for verbose error messages");
+        }
+    }));
 
     if matches.get_flag("clear-cache") {
         if let Some(path) = sjs::get_storage_directory().map(|x| x.join("libs")) {
             std::fs::remove_dir_all(path.clone()).map_err(|x| format!("{}: {}", path.display(), x)).or_panic();
         }
         if matches.subcommand() == None {
-            return Ok(())
+            return;
         }
     };
 
@@ -88,7 +85,7 @@ async fn main() -> Result<(), AnyError> {
         }
     };
 
-    sjs::run(source, args, matches.get_flag("remote")).await    
+    sjs::run(source, args, matches.get_flag("remote")).await.or_panic();
 }
 
 fn read_stdin() -> String {
