@@ -37,4 +37,4 @@ deno_runtime = { path = "../deno/runtime" }
 opt-level = "z"
 codegen-units = 1
 lto = true
-strip = true
+strip = "debuginfo"
