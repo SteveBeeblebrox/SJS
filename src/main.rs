@@ -14,7 +14,17 @@ async fn main() {
     let matches = Command::new("SJS")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
-        .before_help(format!("SJS {}\n{}\n{}", clap::crate_version!(), clap::crate_authors!(), "A simple JavaScript runtime"))
+        .about("A simple JavaScript runtime")
+        .disable_colored_help(true)
+        .help_template("\
+{name} {version}
+{author-with-newline}{about-with-newline}
+USAGE:
+{tab}{usage}
+
+OPTIONS:
+{options}
+")
 
         // Use '-v' instead of '-V' for the short version flag
         .disable_version_flag(true)
