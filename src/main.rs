@@ -52,13 +52,15 @@ OPTIONS:
 
         .arg(Arg::new("inspect")
             .short('i')
+            .visible_short_alias('d')
             .long("inspect")
+            .visible_alias("debug")
             .help("Enable inspector and wait for debugger to connect")
             .action(ArgAction::SetTrue)
         )
 
-        .arg(Arg::new("inspect-port")
-            .long("inspect-port")
+        .arg(Arg::new("inspector-port")
+            .long("inspector-port")
             .help("Sets the inspector port and continues [default: 9229]")
             .value_name("PORT")
             .num_args(1)
@@ -112,7 +114,7 @@ OPTIONS:
         }
     };
 
-    let port = match matches.get_one::<u16>("inspect-port") {
+    let port = match matches.get_one::<u16>("inspector-port") {
         Some(port) => Some(port).copied(),
         None if matches.get_flag("inspect") => Some(9229),
         _ => None

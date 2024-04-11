@@ -99,7 +99,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             bootstrap: BootstrapOptions {
                 user_agent: util::get_user_agent().to_string(),
                 args: vec![source_name, ..args],
-                unstable_features: (1..=8).collect(), // deno_runtime:lib/.rs UNSTABLE_GRANULAR_FLAGS
+                unstable_features: (1..=8).collect(), // deno_runtime:lib.rs UNSTABLE_GRANULAR_FLAGS
                 ..Default::default()
             },
             module_loader: Rc::new(SJSModuleLoader {file_fetcher}),
@@ -109,12 +109,13 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             origin_storage_dir: sjs_storage_dir,
 
             should_wait_for_inspector_session: inspector_options.wait,
-            maybe_inspector_server: inspector,
+            maybe_inspector_server: inspector.clone(),
 
             ..Default::default()
         },
     );
 
+    worker.js_runtime.maybe_init_inspector();
     worker.execute_main_module(&main_module).await?;
     worker.run_event_loop(false).await?;
     Ok(())
