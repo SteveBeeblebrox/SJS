@@ -242,7 +242,7 @@ impl HttpClient {
   pub(crate) fn client(&self) -> Result<&reqwest::Client, AnyError> {
     self.cell.get_or_try_init(|| {
       create_http_client(
-        crate::util::get_user_agent().as_str(),
+        crate::util::get_user_agent(),
         CreateHttpClientOptions {
           root_cert_store: match &self.root_cert_store_provider {
             Some(provider) => Some(provider.get_or_try_init()?.clone()),

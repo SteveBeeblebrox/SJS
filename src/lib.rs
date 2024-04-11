@@ -2,9 +2,11 @@ use deno_core::{Snapshot,ModuleSpecifier};
 use deno_core::error::AnyError;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
 use deno_runtime::permissions::PermissionsContainer;
+use deno_runtime::inspector_server::InspectorServer;
 use deno_runtime::BootstrapOptions;
 use deno_cache_dir::GlobalHttpCache;
 
+use std::net::SocketAddr;
 use std::path::{Path,PathBuf};
 use std::sync::Arc;
 use std::rc::Rc;
@@ -28,6 +30,11 @@ pub enum ScriptSource {
     FileOrURL(String)
 }
 
+pub struct InspectorOptions {
+    pub port: Option<u16>,
+    pub wait: bool
+}
+
 pub fn get_storage_directory() -> Option<PathBuf> {
     match home::home_dir() {
         Some(path) if !path.as_os_str().is_empty() => Some(path.join(".sjs")),
@@ -35,7 +42,7 @@ pub fn get_storage_directory() -> Option<PathBuf> {
     }
 }
 
-pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> Result<(), AnyError> {
+pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
     let source_name = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
@@ -77,12 +84,20 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> 
         }
     };
 
+    let inspector = match inspector_options.port {
+        Some(port) => {
+            let host = format!("127.0.0.1:{port}").parse::<SocketAddr>().unwrap();
+            Some(Arc::new(InspectorServer::new(host, util::get_user_agent())))
+        },
+        _ => None
+    };
+
     let mut worker = MainWorker::bootstrap_from_options(
         main_module.clone(),
         PermissionsContainer::allow_all(),
         WorkerOptions {
             bootstrap: BootstrapOptions {
-                user_agent: util::get_user_agent(),
+                user_agent: util::get_user_agent().to_string(),
                 args: vec![source_name, ..args],
                 unstable_features: (1..=8).collect(), // deno_runtime:lib/.rs UNSTABLE_GRANULAR_FLAGS
                 ..Default::default()
@@ -92,6 +107,10 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool) -> 
             startup_snapshot: Some(Snapshot::Static(CLI_SNAPSHOT)),
             // cache_storage_dir: std::env::temp_dir(),
             origin_storage_dir: sjs_storage_dir,
+
+            should_wait_for_inspector_session: inspector_options.wait,
+            maybe_inspector_server: inspector,
+
             ..Default::default()
         },
     );

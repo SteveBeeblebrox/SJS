@@ -3,6 +3,7 @@ use backtrace::Backtrace;
 use clap::{Arg, Command, ArgAction};
 
 use sjs::ScriptSource;
+use sjs::InspectorOptions;
 
 use or_panic::OrPanic;
 
@@ -47,6 +48,22 @@ OPTIONS:
             .long("clear-cache")
             .help("Clear dependency cache and exit if no source is specified")
             .action(ArgAction::SetTrue)
+        )
+
+        .arg(Arg::new("inspect")
+            .short('i')
+            .long("inspect")
+            .help("Enable inspector and wait for debugger to connect")
+            .action(ArgAction::SetTrue)
+        )
+
+        .arg(Arg::new("inspect-port")
+            .long("inspect-port")
+            .help("Sets the inspector port and continues [default: 9229]")
+            .value_name("PORT")
+            .num_args(1)
+            .value_parser(clap::value_parser!(u16).range(1..=i64::from(u16::MAX)))
+            .action(ArgAction::Set)
         )
 
         .arg(Arg::new("remote")
@@ -95,7 +112,16 @@ OPTIONS:
         }
     };
 
-    sjs::run(source, args, matches.get_flag("remote")).await.or_panic();
+    let port = match matches.get_one::<u16>("inspect-port") {
+        Some(port) => Some(port).copied(),
+        None if matches.get_flag("inspect") => Some(9229),
+        _ => None
+    };
+
+    sjs::run(source, args, matches.get_flag("remote"), InspectorOptions {
+        wait: matches.get_flag("inspect"),
+        port
+    }).await.or_panic();
 }
 
 fn read_stdin() -> String {
