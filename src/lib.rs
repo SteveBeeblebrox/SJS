@@ -1,4 +1,4 @@
-use deno_core::{Snapshot,ModuleSpecifier};
+use deno_core::{Snapshot,ModuleSpecifier,FeatureChecker};
 use deno_core::error::AnyError;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
 use deno_runtime::permissions::PermissionsContainer;
@@ -92,6 +92,23 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         _ => None
     };
 
+    let unstable_features = (1..=8).collect::<Vec<i32>>(); // deno_runtime:lib.rs UNSTABLE_GRANULAR_FLAGS
+    let feature_checker = {
+        let mut feature_checker = FeatureChecker::default();
+        feature_checker.set_exit_cb(Box::new(|_feature: &str, api_name: &str| {
+            eprintln!("Unstable API '{api_name}' is not supported!");
+            std::process::exit(70);
+        }));
+
+        for (flag_name, _, i) in deno_runtime::UNSTABLE_GRANULAR_FLAGS {
+            if unstable_features.contains(i) {
+                feature_checker.enable_feature(flag_name);
+            }
+        }
+
+        Arc::new(feature_checker)
+    };
+
     let mut worker = MainWorker::bootstrap_from_options(
         main_module.clone(),
         PermissionsContainer::allow_all(),
@@ -99,7 +116,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             bootstrap: BootstrapOptions {
                 user_agent: util::get_user_agent().to_string(),
                 args: vec![source_name, ..args],
-                unstable_features: (1..=8).collect(), // deno_runtime:lib.rs UNSTABLE_GRANULAR_FLAGS
+                unstable_features,
                 ..Default::default()
             },
             module_loader: Rc::new(SJSModuleLoader {file_fetcher}),
@@ -110,6 +127,8 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
 
             should_wait_for_inspector_session: inspector_options.wait,
             maybe_inspector_server: inspector.clone(),
+            
+            feature_checker,
 
             ..Default::default()
         },
