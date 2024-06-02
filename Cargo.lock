@@ -4673,7 +4673,6 @@ dependencies = [
  "clap",
  "deno_ast",
  "deno_cache_dir",
- "deno_core",
  "deno_graph",
  "deno_runtime",
  "home",
@@ -4682,6 +4681,7 @@ dependencies = [
  "panic-message",
  "rand",
  "tokio",
+ "twox-hash",
  "velcro",
 ]
 

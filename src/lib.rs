@@ -1,4 +1,5 @@
-use deno_core::{Snapshot,ModuleSpecifier,FeatureChecker};
+use deno_runtime::deno_core;
+use deno_core::{ModuleSpecifier,FeatureChecker};
 use deno_core::error::AnyError;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
 use deno_runtime::permissions::PermissionsContainer;
@@ -87,7 +88,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
     let inspector = match inspector_options.port {
         Some(port) => {
             let host = format!("127.0.0.1:{port}").parse::<SocketAddr>().unwrap();
-            Some(Arc::new(InspectorServer::new(host, util::get_user_agent())))
+            Some(Arc::new(InspectorServer::new(host, util::get_user_agent()).unwrap()))
         },
         _ => None
     };
@@ -121,7 +122,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             },
             module_loader: Rc::new(SJSModuleLoader {file_fetcher}),
             extensions: vec![],
-            startup_snapshot: Some(Snapshot::Static(CLI_SNAPSHOT)),
+            startup_snapshot: Some(CLI_SNAPSHOT),
             // cache_storage_dir: std::env::temp_dir(),
             origin_storage_dir: sjs_storage_dir,
 

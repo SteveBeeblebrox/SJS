@@ -12,6 +12,7 @@ use deno_cache_dir::HttpCache;
 
 use deno_ast::MediaType;
 
+use deno_runtime::deno_core;
 use deno_core::anyhow::Context;
 use deno_core::error::{custom_error,generic_error,uri_error,AnyError};
 use deno_core::futures;

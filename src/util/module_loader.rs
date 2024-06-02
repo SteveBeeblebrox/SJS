@@ -1,3 +1,4 @@
+use deno_runtime::deno_core;
 use deno_core::{
   ModuleSpecifier, ModuleSource, ModuleType, RequestedModuleType, ResolutionKind,
   resolve_import, ModuleSourceCode, ModuleLoader, ModuleLoadResponse
@@ -52,8 +53,7 @@ impl ModuleLoader for SJSModuleLoader {
             ModuleType::JavaScript
           };
 
-          if module_type == ModuleType::Json && requested_module_type != RequestedModuleType::Json
-          {
+          if module_type == ModuleType::Json && requested_module_type != RequestedModuleType::Json {
             return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement."));
           }
 
@@ -63,6 +63,7 @@ impl ModuleLoader for SJSModuleLoader {
             module_type,
             ModuleSourceCode::Bytes(code.into()),
             &module_specifier,
+            None // TODO implement source code cache?
           ))
         }.boxed_local()
       )

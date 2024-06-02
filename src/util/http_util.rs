@@ -1,6 +1,7 @@
 // From deno:cli/http_util.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 use cache_control::{Cachability,CacheControl};
+use deno_runtime::deno_core;
 use deno_core::error::{generic_error,AnyError};
 use deno_core::url::Url;
 use deno_runtime::deno_fetch::create_http_client;

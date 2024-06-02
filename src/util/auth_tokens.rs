@@ -1,6 +1,7 @@
 // From deno:cli/auth_tokens.rs
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 
+use deno_runtime::deno_core;
 use deno_core::ModuleSpecifier;
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::env;
 
 use deno_runtime::ops::bootstrap::SnapshotOptions;
+use deno_runtime::deno_core;
 
 fn create_cli_snapshot(snapshot_path: PathBuf) {
 
