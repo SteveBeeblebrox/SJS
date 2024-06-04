@@ -19,6 +19,9 @@ pub use module_loader::SJSModuleLoader;
 mod path_util;
 pub use path_util::ToAbsolutePath;
 
+mod hash;
+pub use hash::hash;
+
 pub fn get_user_agent() -> &'static str {
     concat!("sjs/", env!("CARGO_PKG_VERSION"))
 }
