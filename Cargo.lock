@@ -4680,6 +4680,7 @@ dependencies = [
  "or_panic",
  "panic-message",
  "rand",
+ "thiserror",
  "tokio",
  "twox-hash",
  "velcro",

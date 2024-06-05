@@ -23,6 +23,7 @@ deno_graph = "0.77.2"
 deno_cache_dir = "=0.6.1"
 rand = "0.8.5"
 twox-hash = "1.6.3"
+thiserror="1.0.61"
 or_panic = { git = "https://github.com/SteveBeeblebrox/or_panic.git" }
 
 [build-dependencies]
