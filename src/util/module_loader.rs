@@ -9,13 +9,15 @@ use deno_runtime::permissions::PermissionsContainer;
 use deno_core::futures::FutureExt;
 
 use std::path::Path;
+use std::sync::Arc;
+
 
 use or_panic::OrPanic;
 
 use crate::util::FileFetcher;
 
 pub struct SJSModuleLoader {
-  pub file_fetcher: FileFetcher
+  pub file_fetcher: Arc<FileFetcher>
 }
 
 impl ModuleLoader for SJSModuleLoader {

@@ -4,7 +4,7 @@ use std::env;
 use deno_runtime::ops::bootstrap::SnapshotOptions;
 use deno_runtime::deno_core;
 
-fn create_cli_snapshot(snapshot_path: PathBuf) {
+fn create_startup_snapshot(snapshot_path: PathBuf) {
 
     let snapshot_options = SnapshotOptions {
         deno_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -18,15 +18,13 @@ fn create_cli_snapshot(snapshot_path: PathBuf) {
         snapshot_options,
         vec![]
     );
-}
-
-    
+}   
 
 fn main() {
     println!("cargo:rustc-env=TARGET={}", env::var("TARGET").unwrap());
     println!("cargo:rustc-env=PROFILE={}", env::var("PROFILE").unwrap());  
 
-    create_cli_snapshot(PathBuf::from(
-        PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("CLI_SNAPSHOT.bin")
+    create_startup_snapshot(PathBuf::from(
+        PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("STARTUP_SNAPSHOT.bin")
     ));
 }

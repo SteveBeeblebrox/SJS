@@ -91,6 +91,8 @@ OPTIONS:
         } else {
             eprintln!("rerun with -V for verbose error messages");
         }
+
+        std::process::exit(-1);
     }));
 
     if matches.get_flag("clear-cache") {
