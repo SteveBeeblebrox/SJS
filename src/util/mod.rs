@@ -22,6 +22,10 @@ pub use path_util::ToAbsolutePath;
 mod hash;
 pub use hash::hash;
 
+mod cert;
+#[allow(unused_imports)]
+pub use cert::{CaData,BasicRootCertStoreProvider};
+
 pub fn get_user_agent() -> &'static str {
     concat!("sjs/", env!("CARGO_PKG_VERSION"))
 }

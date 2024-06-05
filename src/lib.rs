@@ -1,15 +1,14 @@
-#![allow(unused_imports,unused_variables,dead_code)] // Temp
-
 use deno_runtime::deno_core;
-use deno_core::{ModuleSpecifier,FeatureChecker};
+use deno_core::{ModuleSpecifier,FeatureChecker,SharedArrayBufferStore,CompiledWasmModuleStore};
 use deno_core::error::AnyError;
+use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
+use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
 use deno_runtime::permissions::PermissionsContainer;
 use deno_runtime::inspector_server::InspectorServer;
-use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
+use deno_runtime::deno_tls::RootCertStoreProvider;
+use deno_runtime::deno_web::BlobStore;
 use deno_cache_dir::GlobalHttpCache;
-
-use deno_runtime::deno_broadcast_channel::{BroadcastChannel, InMemoryBroadcastChannel};
 
 use std::net::SocketAddr;
 use std::path::{Path,PathBuf};
@@ -21,7 +20,7 @@ use velcro::vec;
 use or_panic::OrPanic;
 
 mod util;
-use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting};
+use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting,BasicRootCertStoreProvider};
 use util::ToAbsolutePath as _;
 
 static STARTUP_SNAPSHOT: &[u8] =
@@ -40,18 +39,9 @@ pub struct InspectorOptions {
     pub wait: bool
 }
 
-use deno_core::{
-    SharedArrayBufferStore,
-    CompiledWasmModuleStore,
-};
-
-use deno_runtime::deno_web::{
-    BlobStore
-};
-
-
 #[derive(Clone)]
 pub struct SharedState {
+    args0: String,
     args: Vec<String>,
 
     broadcast_channel: InMemoryBroadcastChannel,
@@ -66,12 +56,15 @@ pub struct SharedState {
 
     inspector: Option<Arc<InspectorServer>>,
 
-    file_fetcher: Arc<FileFetcher>
+    file_fetcher: Arc<FileFetcher>,
+
+    root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>
 }
 
 impl Default for SharedState {
     fn default() -> Self {
         Self {
+            args0: String::new(),
             args: vec![],
 
             broadcast_channel: Default::default(),
@@ -83,7 +76,7 @@ impl Default for SharedState {
             seed: None,
 
             // See deno_runtime::UNSTABLE_GRANULAR_FLAGS
-            unstable_features: (1..=8).collect(),
+            unstable_features: vec![..(1..=8),11],
 
             inspector: None,
 
@@ -93,7 +86,8 @@ impl Default for SharedState {
                 false,
                 Arc::new(HttpClient::new(Default::default(),None)),
                 Default::default(),
-            ))
+            )),
+            root_cert_store_provider: Some(Arc::new(BasicRootCertStoreProvider::default()))
         }
     }
 }
@@ -120,7 +114,7 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
 
         let options = WebWorkerOptions {
             bootstrap: BootstrapOptions {
-                args: vec![args.main_module.to_string(), ..shared.args.clone()],
+                args: vec![shared.args0.clone(), ..shared.args.clone()],
                 location: Some(args.main_module.clone()),
                 unstable_features: shared.unstable_features.clone(),
                 user_agent: util::get_user_agent().to_string(),
@@ -133,7 +127,7 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
             extensions: vec![],
             startup_snapshot: Some(STARTUP_SNAPSHOT),
             unsafely_ignore_certificate_errors: None,
-            root_cert_store_provider:                                                             None,  // TODO Option<Arc<dyn RootCertStoreProvider>>
+            root_cert_store_provider: shared.root_cert_store_provider.clone(),
             seed: shared.seed,
             fs: Arc::new(deno_runtime::deno_fs::RealFs),
             module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
@@ -148,7 +142,7 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
             broadcast_channel: shared.broadcast_channel.clone(),
             shared_array_buffer_store: shared.shared_array_buffer_store.clone(),
             compiled_wasm_module_store: shared.compiled_wasm_module_store.clone(),
-            cache_storage_dir: Some(get_temp_directory().join(util::hash(&[args.main_module.to_string().as_bytes()]))),
+            cache_storage_dir: Some(get_temp_directory().join(util::hash(args.main_module.to_string().as_bytes()))),
             stdio: Default::default(),
             feature_checker: create_feature_checker(&shared.unstable_features),
             strace_ops: None,
@@ -178,7 +172,7 @@ pub fn get_temp_directory() -> PathBuf {
 }
 
 pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
-    let source_name = match input.clone() {
+    let args0 = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
         ScriptSource::FileOrURL(source_path) => {
@@ -218,6 +212,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
     };
 
     let shared = Arc::new(SharedState {
+        args0,
         args,
         inspector: match inspector_options.port {
             Some(port) => {
@@ -234,7 +229,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
 
     let options = WorkerOptions {
         bootstrap: BootstrapOptions {
-            args: vec![main_module.to_string(), ..shared.args.clone()],
+            args: vec![shared.args0.clone(), ..shared.args.clone()],
             location: Some(main_module.clone()),
             unstable_features: shared.unstable_features.clone(),
             user_agent: util::get_user_agent().to_string(),
@@ -249,7 +244,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         skip_op_registration: false,
         create_params: None,
         unsafely_ignore_certificate_errors: None,
-        root_cert_store_provider:                                                             None,  // TODO Option<Arc<dyn RootCertStoreProvider>>
+        root_cert_store_provider: shared.root_cert_store_provider.clone(),
         seed: shared.seed,
         fs: Arc::new(deno_runtime::deno_fs::RealFs),
         module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
@@ -262,9 +257,9 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         should_wait_for_inspector_session: inspector_options.wait,
         strace_ops: None,
         get_error_class_fn: Some(&(|e| deno_runtime::errors::get_error_class_name(e).unwrap_or("Error"))),
-        cache_storage_dir: Some(get_temp_directory().join(util::hash(&[main_module.to_string().as_bytes()]))),
+        cache_storage_dir: Some(get_temp_directory().join(util::hash(main_module.to_string().as_bytes()))),
         
-        origin_storage_dir: Some(get_storage_directory().unwrap_or_else(|| get_temp_directory()).join(util::hash(&[main_module.to_string().as_bytes()]))),
+        origin_storage_dir: Some(get_storage_directory().unwrap_or_else(|| get_temp_directory()).join(util::hash(main_module.to_string().as_bytes()))),
 
         blob_store: shared.blob_store.clone(),
         broadcast_channel: shared.broadcast_channel.clone(),
