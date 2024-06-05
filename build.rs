@@ -18,9 +18,7 @@ fn create_startup_snapshot(snapshot_path: PathBuf) {
         snapshot_options,
         vec![]
     );
-}
-
-    
+}   
 
 fn main() {
     println!("cargo:rustc-env=TARGET={}", env::var("TARGET").unwrap());
