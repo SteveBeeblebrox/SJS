@@ -1,6 +1,6 @@
 // From https://internals.rust-lang.org/t/path-to-lexical-absolute/14940
 // Based off of work by chrisd 2021
-use std::path::{Path,PathBuf, Component};
+use std::path::{Path, PathBuf, Component};
 
 pub trait ToAbsolutePath {
     fn absolute(&self) -> std::io::Result<PathBuf>;
