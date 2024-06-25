@@ -8,7 +8,7 @@ fn create_startup_snapshot(snapshot_path: PathBuf) {
 
     let snapshot_options = SnapshotOptions {
         deno_version: env!("CARGO_PKG_VERSION").to_string(),
-        ts_version: String::from(""),
+        ts_version: mtsc::version().to_string(),
         v8_version: deno_core::v8_version(),
         target: std::env::var("TARGET").unwrap(),
     };

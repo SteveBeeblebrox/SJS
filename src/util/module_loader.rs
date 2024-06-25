@@ -5,12 +5,11 @@ use deno_core::{
 };
 use deno_core::anyhow::Error;
 use deno_core::error::generic_error;
-use deno_runtime::permissions::PermissionsContainer;
+use deno_runtime::deno_permissions::PermissionsContainer;
 use deno_core::futures::FutureExt;
 
 use std::path::Path;
 use std::sync::Arc;
-
 
 use or_panic::OrPanic;
 

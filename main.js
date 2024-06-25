@@ -10,10 +10,10 @@ console.log(`Args: ${system.args}`)
 
 
 //worker still expects (url,{deno:{}}) not sjs CHANGE in runtime/js/11_workers.js line 98 and others
-new Worker(import.meta.resolve('./worker.js'),{type:'module',ext:{
-    permissions: 'inherit',
-    persistent: false
-}})
+// new Worker(import.meta.resolve('./worker.js'),{type:'module',ext:{
+//     permissions: 'inherit',
+//     persistent: false
+// }})
 
 // new Worker(import.meta.resolve('./worker.js'),{type:'module'})
 

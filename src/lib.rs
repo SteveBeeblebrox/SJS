@@ -4,7 +4,7 @@ use deno_core::error::AnyError;
 use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
 use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
-use deno_runtime::permissions::PermissionsContainer;
+use deno_runtime::deno_permissions::PermissionsContainer;
 use deno_runtime::inspector_server::InspectorServer;
 use deno_runtime::deno_tls::RootCertStoreProvider;
 use deno_runtime::deno_web::BlobStore;
@@ -131,6 +131,7 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
             seed: shared.seed,
             fs: Arc::new(deno_runtime::deno_fs::RealFs),
             module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
+            node_resolver: None,
             npm_resolver: None,
             create_web_worker_cb: create_web_worker_callback(shared.clone()),
             format_js_error_fn: Some(Arc::new(deno_runtime::fmt_errors::format_js_error)),
@@ -248,6 +249,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         seed: shared.seed,
         fs: Arc::new(deno_runtime::deno_fs::RealFs),
         module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
+        node_resolver: None,
         npm_resolver: None,
         create_web_worker_cb: create_web_worker_callback(shared.clone()),
         format_js_error_fn: Some(Arc::new(deno_runtime::fmt_errors::format_js_error)),
@@ -267,7 +269,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         compiled_wasm_module_store: shared.compiled_wasm_module_store.clone(),
         stdio: Default::default(),
         feature_checker: create_feature_checker(&shared.unstable_features),
-        v8_code_cache: None // // TODO implement source code cache? Option<Arc<dyn CodeCache>>,
+        v8_code_cache: None // TODO implement source code cache? Option<Arc<dyn CodeCache>>,
     };
 
     let mut worker = MainWorker::bootstrap_from_options(
