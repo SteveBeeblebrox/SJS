@@ -25,11 +25,11 @@ rand = "0.8.5"
 twox-hash = "1.6.3"
 thiserror="1.0.61"
 or_panic = { git = "https://github.com/SteveBeeblebrox/or_panic.git" }
-mtsc = { git = "https://github.com/SteveBeeblebrox/mtsc.git", features = ["preprocess","transpile"]}
+mtsc = { git = "https://github.com/SteveBeeblebrox/mtsc.git", features = ["preprocess","transpile","external-v8"]}
 
 [build-dependencies]
 deno_runtime = "0.166.0"
-mtsc = { git = "https://github.com/SteveBeeblebrox/mtsc.git", features = ["preprocess","transpile"]}
+mtsc = { git = "https://github.com/SteveBeeblebrox/mtsc.git", features = ["preprocess","transpile","external-v8"]}
 
 [patch.crates-io]
 deno_core = { git = "https://github.com/SteveBeeblebrox/deno_core.git" }
