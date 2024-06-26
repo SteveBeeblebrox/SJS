@@ -58,7 +58,10 @@ pub struct SharedState {
 
     file_fetcher: Arc<FileFetcher>,
 
-    root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>
+    root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>,
+
+    macros: Vec<String>,
+    include_paths: Vec<String>
 }
 
 impl Default for SharedState {
@@ -87,7 +90,10 @@ impl Default for SharedState {
                 Arc::new(HttpClient::new(Default::default(),None)),
                 Default::default(),
             )),
-            root_cert_store_provider: Some(Arc::new(BasicRootCertStoreProvider::default()))
+            root_cert_store_provider: Some(Arc::new(BasicRootCertStoreProvider::default())),
+
+            macros: vec![],
+            include_paths: vec![]
         }
     }
 }
@@ -130,7 +136,7 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
             root_cert_store_provider: shared.root_cert_store_provider.clone(),
             seed: shared.seed,
             fs: Arc::new(deno_runtime::deno_fs::RealFs),
-            module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
+            module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone()}),
             node_resolver: None,
             npm_resolver: None,
             create_web_worker_cb: create_web_worker_callback(shared.clone()),
@@ -172,7 +178,7 @@ pub fn get_temp_directory() -> PathBuf {
     std::env::temp_dir().join("sjs")
 }
 
-pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
+pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
     let args0 = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
@@ -229,6 +235,9 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         },
         file_fetcher,
 
+        macros,
+        include_paths,
+
         ..Default::default()
     });
 
@@ -253,7 +262,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         root_cert_store_provider: shared.root_cert_store_provider.clone(),
         seed: shared.seed,
         fs: Arc::new(deno_runtime::deno_fs::RealFs),
-        module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
+        module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone()}),
         node_resolver: None,
         npm_resolver: None,
         create_web_worker_cb: create_web_worker_callback(shared.clone()),
