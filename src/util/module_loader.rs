@@ -11,8 +11,6 @@ use deno_core::futures::FutureExt;
 use std::path::Path;
 use std::sync::Arc;
 
-use or_panic::OrPanic;
-
 use crate::util::FileFetcher;
 
 pub struct SJSModuleLoader {
@@ -73,13 +71,13 @@ impl ModuleLoader for SJSModuleLoader {
           };
 
           if module_type == ModuleType::Json && requested_module_type != RequestedModuleType::Json {
-            return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement."));
+            return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement"));
           }
 
-          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.map_err(|x| format!("{}: {}",module_specifier,x)).or_panic().source.clone();
+          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.map_err(|x| generic_error(format!("{}: {}",module_specifier,x)))?.source.clone();
           
           let code = if module_type == ModuleType::JavaScript {
-            ModuleSourceCode::String(mtsc::compile(std::str::from_utf8(&code).or_panic(),&mtsc_options).unwrap_or(String::new()).into())
+            ModuleSourceCode::String(mtsc::compile(std::str::from_utf8(&code)?,&mtsc_options).ok_or_else(|| generic_error("Failed to compile script"))?.into())
           } else {
             ModuleSourceCode::Bytes(code.into())
           };
