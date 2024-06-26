@@ -177,7 +177,9 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
         ScriptSource::FileOrURL(source_path) => {
-            Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap_or(source_path)
+            ModuleSpecifier::parse(&source_path).map(|_| source_path.clone()).unwrap_or_else(|_|
+                Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic()
+            )
         }
         _ => String::new()
     };
@@ -208,7 +210,10 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             ModuleSpecifier::parse(&source_url).or_panic()
         },
         ScriptSource::FileOrURL(source_path) => {
-            Path::new(&source_path).absolute().map(|x| ModuleSpecifier::from_file_path(x.as_path()).unwrap()).unwrap_or_else(|_| ModuleSpecifier::parse(&source_path).map_err(|_x| format!("{}: {}",source_path,"Invalid file or URL")).or_panic())
+            ModuleSpecifier::parse(&source_path).unwrap_or_else(|_|
+                Path::new(&source_path).absolute().map(|x| ModuleSpecifier::from_file_path(x.as_path()).unwrap())
+                .map_err(|_x| format!("{}: {}",source_path,"Invalid file or URL")).or_panic()
+            )
         }
     };
 
