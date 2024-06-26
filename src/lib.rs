@@ -4,7 +4,7 @@ use deno_core::error::AnyError;
 use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
 use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
-use deno_runtime::permissions::PermissionsContainer;
+use deno_runtime::deno_permissions::PermissionsContainer;
 use deno_runtime::inspector_server::InspectorServer;
 use deno_runtime::deno_tls::RootCertStoreProvider;
 use deno_runtime::deno_web::BlobStore;
@@ -58,7 +58,10 @@ pub struct SharedState {
 
     file_fetcher: Arc<FileFetcher>,
 
-    root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>
+    root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>,
+
+    macros: Vec<String>,
+    include_paths: Vec<String>
 }
 
 impl Default for SharedState {
@@ -87,7 +90,10 @@ impl Default for SharedState {
                 Arc::new(HttpClient::new(Default::default(),None)),
                 Default::default(),
             )),
-            root_cert_store_provider: Some(Arc::new(BasicRootCertStoreProvider::default()))
+            root_cert_store_provider: Some(Arc::new(BasicRootCertStoreProvider::default())),
+
+            macros: vec![],
+            include_paths: vec![]
         }
     }
 }
@@ -130,7 +136,8 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
             root_cert_store_provider: shared.root_cert_store_provider.clone(),
             seed: shared.seed,
             fs: Arc::new(deno_runtime::deno_fs::RealFs),
-            module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
+            module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone()}),
+            node_resolver: None,
             npm_resolver: None,
             create_web_worker_cb: create_web_worker_callback(shared.clone()),
             format_js_error_fn: Some(Arc::new(deno_runtime::fmt_errors::format_js_error)),
@@ -171,12 +178,14 @@ pub fn get_temp_directory() -> PathBuf {
     std::env::temp_dir().join("sjs")
 }
 
-pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
+pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
     let args0 = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
         ScriptSource::FileOrURL(source_path) => {
-            Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).unwrap_or(source_path)
+            ModuleSpecifier::parse(&source_path).map(|_| source_path.clone()).unwrap_or_else(|_|
+                Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic()
+            )
         }
         _ => String::new()
     };
@@ -207,7 +216,10 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             ModuleSpecifier::parse(&source_url).or_panic()
         },
         ScriptSource::FileOrURL(source_path) => {
-            Path::new(&source_path).absolute().map(|x| ModuleSpecifier::from_file_path(x.as_path()).unwrap()).unwrap_or_else(|_| ModuleSpecifier::parse(&source_path).map_err(|_x| format!("{}: {}",source_path,"Invalid file or URL")).or_panic())
+            ModuleSpecifier::parse(&source_path).unwrap_or_else(|_|
+                Path::new(&source_path).absolute().map(|x| ModuleSpecifier::from_file_path(x.as_path()).unwrap())
+                .map_err(|_x| format!("{}: {}",source_path,"Invalid file or URL")).or_panic()
+            )
         }
     };
 
@@ -222,6 +234,9 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
             _ => None
         },
         file_fetcher,
+
+        macros,
+        include_paths,
 
         ..Default::default()
     });
@@ -247,7 +262,8 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         root_cert_store_provider: shared.root_cert_store_provider.clone(),
         seed: shared.seed,
         fs: Arc::new(deno_runtime::deno_fs::RealFs),
-        module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone()}),
+        module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone()}),
+        node_resolver: None,
         npm_resolver: None,
         create_web_worker_cb: create_web_worker_callback(shared.clone()),
         format_js_error_fn: Some(Arc::new(deno_runtime::fmt_errors::format_js_error)),
@@ -267,7 +283,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, allow_remote: bool, ins
         compiled_wasm_module_store: shared.compiled_wasm_module_store.clone(),
         stdio: Default::default(),
         feature_checker: create_feature_checker(&shared.unstable_features),
-        v8_code_cache: None // // TODO implement source code cache? Option<Arc<dyn CodeCache>>,
+        v8_code_cache: None // TODO implement source code cache? Option<Arc<dyn CodeCache>>,
     };
 
     let mut worker = MainWorker::bootstrap_from_options(

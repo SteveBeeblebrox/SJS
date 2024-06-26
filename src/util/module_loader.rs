@@ -5,19 +5,18 @@ use deno_core::{
 };
 use deno_core::anyhow::Error;
 use deno_core::error::generic_error;
-use deno_runtime::permissions::PermissionsContainer;
+use deno_runtime::deno_permissions::PermissionsContainer;
 use deno_core::futures::FutureExt;
 
 use std::path::Path;
 use std::sync::Arc;
 
-
-use or_panic::OrPanic;
-
 use crate::util::FileFetcher;
 
 pub struct SJSModuleLoader {
-  pub file_fetcher: Arc<FileFetcher>
+  pub file_fetcher: Arc<FileFetcher>,
+  pub macros: Vec<String>,
+  pub include_paths: Vec<String>
 }
 
 impl ModuleLoader for SJSModuleLoader {
@@ -39,14 +38,30 @@ impl ModuleLoader for SJSModuleLoader {
     ) -> ModuleLoadResponse {
       let module_specifier = module_specifier.clone();
       let file_fetcher = self.file_fetcher.clone();
+
+      let macros = self.macros.clone();
+      let include_paths = self.include_paths.clone();
+
       return ModuleLoadResponse::Async(
         async move {
-          let module_type = if let Some(extension) = Path::new(&module_specifier.path()).extension() {
-            let ext = extension.to_string_lossy().to_lowercase();
-            if ext == "json" {
-              ModuleType::Json
-            } else {
-              match &requested_module_type {
+          let maybe_ext = Path::new(&module_specifier.path()).extension().map(|ext| ext.to_string_lossy().to_lowercase());
+
+          let mut mtsc_options = mtsc::Options {
+            module: true,
+            preprocess: true,
+            transpile: false,
+            filename: Some(module_specifier.clone().into()),
+            macros,
+            include_paths,
+            ..Default::default()
+          };
+
+          let module_type = if let Some(ext) = maybe_ext {
+            mtsc::util::update_options_by_ext(ext.clone(), &mut mtsc_options, &mtsc::util::all_ext_options());
+
+            match ext.as_str() {
+              "json" => ModuleType::Json,
+              _ => match &requested_module_type {
                 RequestedModuleType::Other(ty) => ModuleType::Other(ty.clone()),
                 _ => ModuleType::JavaScript,
               }
@@ -56,14 +71,20 @@ impl ModuleLoader for SJSModuleLoader {
           };
 
           if module_type == ModuleType::Json && requested_module_type != RequestedModuleType::Json {
-            return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement."));
+            return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement"));
           }
 
-          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.map_err(|x| format!("{}: {}",module_specifier,x)).or_panic().source.clone();
-          // TODO mtsc transform code here
-          Ok(ModuleSource::new(
+          let code = file_fetcher.fetch(&module_specifier,PermissionsContainer::allow_all()).await.map_err(|x| generic_error(format!("{}: {}",module_specifier,x)))?.source.clone();
+          
+          let code = if module_type == ModuleType::JavaScript {
+            ModuleSourceCode::String(mtsc::compile(std::str::from_utf8(&code)?,&mtsc_options).ok_or_else(|| generic_error("Failed to compile script"))?.into())
+          } else {
+            ModuleSourceCode::Bytes(code.into())
+          };
+
+          return Ok(ModuleSource::new(
             module_type,
-            ModuleSourceCode::Bytes(code.into()),
+            code,
             &module_specifier,
             None // TODO implement source code cache?
           ))

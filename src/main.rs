@@ -75,6 +75,21 @@ OPTIONS:
             .action(ArgAction::SetTrue)
         )
 
+        .arg(Arg::new("macros")
+            .short('D')
+            .long("define")
+            .value_name("MACROS")
+            .help("Define macros using the form 'MACRO(x)=definition'")
+            .action(ArgAction::Append)
+        )
+
+        .arg(Arg::new("include-paths")
+            .short('I')
+            .value_name("PATH")
+            .help("Add additional include search paths")
+            .action(ArgAction::Append)
+        )
+
         .external_subcommand_value_parser(clap::value_parser!(String))
         .allow_external_subcommands(true)
         .subcommand_value_name("SOURCE")
@@ -122,7 +137,10 @@ OPTIONS:
         _ => None
     };
 
-    sjs::run(source, args, matches.get_flag("remote"), InspectorOptions {
+    let macros = matches.get_many::<String>("macros").map(|x| x.cloned().collect()).unwrap_or(vec![]);
+    let include_paths = matches.get_many::<String>("include-paths").map(|x| x.cloned().collect()).unwrap_or(vec![]);
+
+    sjs::run(source, args, macros, include_paths, matches.get_flag("remote"), InspectorOptions {
         wait: matches.get_flag("inspect"),
         port
     }).await.or_panic();

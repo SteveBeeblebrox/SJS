@@ -24,7 +24,7 @@ use deno_core::ModuleSpecifier;
 use deno_runtime::deno_fetch::reqwest::header::{IF_NONE_MATCH,AUTHORIZATION,ACCEPT,HeaderValue};
 use deno_runtime::deno_fetch::reqwest::StatusCode;
 use deno_runtime::deno_web::BlobStore;
-use deno_runtime::permissions::PermissionsContainer;
+use deno_runtime::deno_permissions::PermissionsContainer;
 
 use std::{env,fs};
 use std::collections::HashMap;
