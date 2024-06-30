@@ -1,6 +1,7 @@
 use deno_runtime::deno_core;
 use deno_core::{ModuleSpecifier,FeatureChecker,SharedArrayBufferStore,CompiledWasmModuleStore};
 use deno_core::error::AnyError;
+use deno_core::url::Url;
 use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
 use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
@@ -9,6 +10,7 @@ use deno_runtime::inspector_server::InspectorServer;
 use deno_runtime::deno_tls::RootCertStoreProvider;
 use deno_runtime::deno_web::BlobStore;
 use deno_cache_dir::GlobalHttpCache;
+use import_map::ImportMap;
 
 use std::net::SocketAddr;
 use std::path::{Path,PathBuf};
@@ -61,7 +63,9 @@ pub struct SharedState {
     root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>,
 
     macros: Vec<String>,
-    include_paths: Vec<String>
+    include_paths: Vec<String>,
+
+    import_map: Option<ImportMap>,
 }
 
 impl Default for SharedState {
@@ -93,7 +97,9 @@ impl Default for SharedState {
             root_cert_store_provider: Some(Arc::new(BasicRootCertStoreProvider::default())),
 
             macros: vec![],
-            include_paths: vec![]
+            include_paths: vec![],
+
+            import_map: None
         }
     }
 }
@@ -136,7 +142,7 @@ fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops
             root_cert_store_provider: shared.root_cert_store_provider.clone(),
             seed: shared.seed,
             fs: Arc::new(deno_runtime::deno_fs::RealFs),
-            module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone()}),
+            module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone(), import_map: shared.import_map.clone()}),
             node_resolver: None,
             npm_resolver: None,
             create_web_worker_cb: create_web_worker_callback(shared.clone()),
@@ -178,7 +184,7 @@ pub fn get_temp_directory() -> PathBuf {
     std::env::temp_dir().join("sjs")
 }
 
-pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, inspector_options: InspectorOptions) -> Result<(), AnyError> {
+pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, import_map: Option<ImportMap>, inspector_options: InspectorOptions) -> Result<(), AnyError> {
     let args0 = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
@@ -238,6 +244,8 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
         macros,
         include_paths,
 
+        import_map,
+
         ..Default::default()
     });
 
@@ -262,7 +270,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
         root_cert_store_provider: shared.root_cert_store_provider.clone(),
         seed: shared.seed,
         fs: Arc::new(deno_runtime::deno_fs::RealFs),
-        module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone()}),
+        module_loader: Rc::new(SJSModuleLoader {file_fetcher: shared.file_fetcher.clone(), macros: shared.macros.clone(), include_paths: shared.include_paths.clone(), import_map: shared.import_map.clone()}),
         node_resolver: None,
         npm_resolver: None,
         create_web_worker_cb: create_web_worker_callback(shared.clone()),
@@ -296,4 +304,15 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
     worker.execute_main_module(&main_module).await?;
     worker.run_event_loop(false).await?;
     Ok(())
+}
+
+pub fn create_import_map<P: AsRef<Path>>(path: P, expand_imports: bool) -> Result<ImportMap, AnyError> {
+    return Ok(import_map::parse_from_json_with_options(
+        &Url::from_file_path(path.as_ref().absolute()?).map_err(|_| AnyError::msg("Invalid Url"))?,
+        std::fs::read_to_string(path)?.as_str(),
+        import_map::ImportMapOptions {
+            expand_imports,
+            ..Default::default()
+        }
+    )?.import_map);
 }

@@ -59,8 +59,9 @@ OPTIONS:
             .action(ArgAction::SetTrue)
         )
 
-        .arg(Arg::new("inspector-port")
-            .long("inspector-port")
+        .arg(Arg::new("port")
+            .short('p')
+            .long("port")
             .help("Sets the inspector port and continues [default: 9229]")
             .value_name("PORT")
             .num_args(1)
@@ -88,6 +89,15 @@ OPTIONS:
             .value_name("PATH")
             .help("Add additional include search paths")
             .action(ArgAction::Append)
+        )
+
+        .arg(Arg::new("import-map")
+            .short('m')
+            .long("import-map")
+            .help("Load a JSON formatted import map")
+            .value_name("PATH")
+            .num_args(1)
+            .action(ArgAction::Set)
         )
 
         .external_subcommand_value_parser(clap::value_parser!(String))
@@ -131,16 +141,18 @@ OPTIONS:
         }
     };
 
-    let port = match matches.get_one::<u16>("inspector-port") {
+    let port = match matches.get_one::<u16>("port") {
         Some(port) => Some(port).copied(),
         None if matches.get_flag("inspect") => Some(9229),
         _ => None
     };
 
+    let import_map = matches.get_one::<String>("import-map").map(|path| sjs::create_import_map(path, true).or_panic());
+
     let macros = matches.get_many::<String>("macros").map(|x| x.cloned().collect()).unwrap_or(vec![]);
     let include_paths = matches.get_many::<String>("include-paths").map(|x| x.cloned().collect()).unwrap_or(vec![]);
 
-    sjs::run(source, args, macros, include_paths, matches.get_flag("remote"), InspectorOptions {
+    sjs::run(source, args, macros, include_paths, matches.get_flag("remote"), import_map, InspectorOptions {
         wait: matches.get_flag("inspect"),
         port
     }).await.or_panic();

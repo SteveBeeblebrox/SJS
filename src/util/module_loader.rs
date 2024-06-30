@@ -7,6 +7,7 @@ use deno_core::anyhow::Error;
 use deno_core::error::generic_error;
 use deno_runtime::deno_permissions::PermissionsContainer;
 use deno_core::futures::FutureExt;
+use import_map::ImportMap;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -16,7 +17,8 @@ use crate::util::FileFetcher;
 pub struct SJSModuleLoader {
   pub file_fetcher: Arc<FileFetcher>,
   pub macros: Vec<String>,
-  pub include_paths: Vec<String>
+  pub include_paths: Vec<String>,
+  pub import_map: Option<ImportMap>,
 }
 
 impl ModuleLoader for SJSModuleLoader {

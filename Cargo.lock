@@ -5015,6 +5015,7 @@ dependencies = [
  "deno_graph",
  "deno_runtime",
  "home",
+ "import_map",
  "mtsc",
  "once_cell",
  "or_panic",
