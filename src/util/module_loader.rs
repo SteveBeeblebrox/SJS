@@ -12,7 +12,7 @@ use import_map::ImportMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::util::FileFetcher;
+use crate::util::{self, FileFetcher};
 
 pub struct SJSModuleLoader {
   pub file_fetcher: Arc<FileFetcher>,
@@ -28,7 +28,10 @@ impl ModuleLoader for SJSModuleLoader {
       referrer: &str,
       _kind: ResolutionKind,
     ) -> Result<ModuleSpecifier, Error> {
-      Ok(resolve_import(specifier, referrer)?)
+      return match &self.import_map {
+        Some(import_map) => Ok(import_map.resolve(specifier, &util::resolve_maybe_url(referrer)?)?),
+        None => Ok(resolve_import(specifier, referrer)?)
+      };
     }
   
     fn load(

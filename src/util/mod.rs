@@ -26,6 +26,10 @@ mod cert;
 #[allow(unused_imports)]
 pub use cert::{CaData,BasicRootCertStoreProvider};
 
+mod url;
+#[allow(unused_imports)]
+pub use url::{Url,resolve_maybe_url};
+
 pub fn get_user_agent() -> &'static str {
     concat!("sjs/", env!("CARGO_PKG_VERSION"))
 }

@@ -1,7 +1,6 @@
 use deno_runtime::deno_core;
 use deno_core::{ModuleSpecifier,FeatureChecker,SharedArrayBufferStore,CompiledWasmModuleStore};
 use deno_core::error::AnyError;
-use deno_core::url::Url;
 use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
 use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
@@ -216,16 +215,13 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
             main_module
         }
         ScriptSource::File(source_path) => {
-            ModuleSpecifier::from_file_path(Path::new(&source_path).absolute().map_err(|x| format!("{}: {}",source_path,x)).or_panic().as_path()).unwrap()
+            ModuleSpecifier::from_file_path(Path::new(&source_path).absolute().map_err(|x| format!("{}: {}",source_path,x)).or_panic().as_path()).map_err(|_x| AnyError::msg(format!("{}: {}",source_path,"Invalid file or URL"))).or_panic()
         }
         ScriptSource::URL(source_url) => {
             ModuleSpecifier::parse(&source_url).or_panic()
         },
         ScriptSource::FileOrURL(source_path) => {
-            ModuleSpecifier::parse(&source_path).unwrap_or_else(|_|
-                Path::new(&source_path).absolute().map(|x| ModuleSpecifier::from_file_path(x.as_path()).unwrap())
-                .map_err(|_x| format!("{}: {}",source_path,"Invalid file or URL")).or_panic()
-            )
+            util::resolve_maybe_url(source_path).or_panic()
         }
     };
 
@@ -308,7 +304,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
 
 pub fn create_import_map<P: AsRef<Path>>(path: P, expand_imports: bool) -> Result<ImportMap, AnyError> {
     return Ok(import_map::parse_from_json_with_options(
-        &Url::from_file_path(path.as_ref().absolute()?).map_err(|_| AnyError::msg("Invalid Url"))?,
+        &ModuleSpecifier::from_file_path(path.as_ref().absolute()?).map_err(|_| AnyError::msg("Invalid Url"))?,
         std::fs::read_to_string(path)?.as_str(),
         import_map::ImportMapOptions {
             expand_imports,
