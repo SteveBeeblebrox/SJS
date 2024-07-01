@@ -21,7 +21,7 @@ async fn main() {
 {name} {version}
 {author-with-newline}{about-with-newline}
 USAGE:
-{tab}{usage}
+{tab}sjs [OPTIONS] [SOURCE] [ARGS...]
 
 OPTIONS:
 {options}
@@ -94,7 +94,7 @@ OPTIONS:
         .arg(Arg::new("import-map")
             .short('m')
             .long("import-map")
-            .help("Load a JSON formatted import map")
+            .help("Load a JSON formatted import map (By default tries to load 'imports.js')")
             .value_name("PATH")
             .num_args(1)
             .action(ArgAction::Set)
@@ -147,8 +147,11 @@ OPTIONS:
         _ => None
     };
 
-    let import_map = matches.get_one::<String>("import-map").map(|path| sjs::create_import_map(path, true).or_panic());
-
+    let import_map = match matches.get_one::<String>("import-map") {
+        Some(path) => Some(sjs::create_import_map(path, true).map_err(|x| format!("{}: {}", path, x)).or_panic()),
+        None => sjs::create_import_map("./imports.json", true).ok()
+    };
+    
     let macros = matches.get_many::<String>("macros").map(|x| x.cloned().collect()).unwrap_or(vec![]);
     let include_paths = matches.get_many::<String>("include-paths").map(|x| x.cloned().collect()).unwrap_or(vec![]);
 
