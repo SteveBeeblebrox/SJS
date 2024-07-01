@@ -3400,7 +3400,7 @@ checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 [[package]]
 name = "mtsc"
 version = "5.5.2"
-source = "git+https://github.com/SteveBeeblebrox/mtsc.git#9d1f06c877dde0127eb63a8158750d009e1208dd"
+source = "git+https://github.com/SteveBeeblebrox/mtsc.git#5e84af518a873048d2b7040ef384733284fdd398"
 dependencies = [
  "backtrace",
  "cc",
