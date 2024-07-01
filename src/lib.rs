@@ -1,6 +1,5 @@
 use deno_runtime::deno_core;
 use deno_core::{ModuleSpecifier,FeatureChecker,SharedArrayBufferStore,CompiledWasmModuleStore};
-use deno_core::error::AnyError;
 use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
 use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
@@ -21,8 +20,8 @@ use velcro::vec;
 use or_panic::OrPanic;
 
 mod util;
-use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting,BasicRootCertStoreProvider};
-use util::ToAbsolutePath as _;
+use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting,BasicRootCertStoreProvider,AnyError};
+use util::path::ToAbsolutePath as _;
 
 static STARTUP_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/STARTUP_SNAPSHOT.bin"));
@@ -221,7 +220,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
             ModuleSpecifier::parse(&source_url).or_panic()
         },
         ScriptSource::FileOrURL(source_path) => {
-            util::resolve_maybe_url(source_path).or_panic()
+            util::url::resolve_maybe_url(source_path).or_panic()
         }
     };
 

@@ -16,8 +16,7 @@ pub use http_util::HttpClient;
 mod module_loader;
 pub use module_loader::SJSModuleLoader;
 
-mod path_util;
-pub use path_util::ToAbsolutePath;
+pub mod path;
 
 mod hash;
 pub use hash::hash;
@@ -26,10 +25,10 @@ mod cert;
 #[allow(unused_imports)]
 pub use cert::{CaData,BasicRootCertStoreProvider};
 
-mod url;
-#[allow(unused_imports)]
-pub use url::{Url,resolve_maybe_url};
+pub mod url;
 
 pub fn get_user_agent() -> &'static str {
     concat!("sjs/", env!("CARGO_PKG_VERSION"))
 }
+
+pub use deno_runtime::deno_core::error::AnyError;

@@ -1,9 +1,9 @@
 pub use deno_runtime::deno_core::url::Url;
-use deno_runtime::deno_core::error::AnyError;
+
+use super::AnyError;
+use super::path::ToAbsolutePath as _;
 
 use std::path::Path;
-
-use super::ToAbsolutePath as _;
 
 /// Converts a `&str` that could represent a file path or remote resource into a `Url`
 pub fn resolve_maybe_url<S: AsRef<str>>(s: S) -> Result<Url, AnyError> {

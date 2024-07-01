@@ -29,7 +29,7 @@ impl ModuleLoader for SJSModuleLoader {
       _kind: ResolutionKind,
     ) -> Result<ModuleSpecifier, Error> {
       return match &self.import_map {
-        Some(import_map) => Ok(import_map.resolve(specifier, &util::resolve_maybe_url(referrer)?)?),
+        Some(import_map) => Ok(import_map.resolve(specifier, &util::url::resolve_maybe_url(referrer)?)?),
         None => Ok(resolve_import(specifier, referrer)?)
       };
     }
