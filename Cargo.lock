@@ -3399,8 +3399,8 @@ checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 
 [[package]]
 name = "mtsc"
-version = "5.5.2"
-source = "git+https://github.com/SteveBeeblebrox/mtsc.git#5e84af518a873048d2b7040ef384733284fdd398"
+version = "5.5.3"
+source = "git+https://github.com/SteveBeeblebrox/mtsc.git#791e4bc5bbb020a226791195c30146898bacdb25"
 dependencies = [
  "backtrace",
  "cc",
@@ -5003,7 +5003,7 @@ checksum = "38b58827f4464d87d377d175e90bf58eb00fd8716ff0a62f80356b5e61555d0d"
 
 [[package]]
 name = "sjs"
-version = "1.5.2"
+version = "1.5.3"
 dependencies = [
  "backtrace",
  "base64",

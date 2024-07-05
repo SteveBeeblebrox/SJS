@@ -1,6 +1,6 @@
 [package]
 name = "sjs"
-version = "1.5.2"
+version = "1.5.3"
 edition = "2021"
 authors = ["Trin Wasinger"]
 
@@ -25,6 +25,7 @@ rand = "0.8.5"
 twox-hash = "1.6.3"
 thiserror = "1.0.61"
 import_map = { version = "0.19.0", features = ["ext"] }
+data-url = "0.3.1"
 or_panic = { git = "https://github.com/SteveBeeblebrox/or_panic.git" }
 mtsc = { git = "https://github.com/SteveBeeblebrox/mtsc.git", features = ["preprocess","transpile","external-v8"]}
 
