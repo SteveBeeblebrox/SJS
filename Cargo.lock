@@ -3400,7 +3400,7 @@ checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 [[package]]
 name = "mtsc"
 version = "5.5.3"
-source = "git+https://github.com/SteveBeeblebrox/mtsc.git#791e4bc5bbb020a226791195c30146898bacdb25"
+source = "git+https://github.com/SteveBeeblebrox/mtsc.git#0dc2ca38f3d01a53755da5a45762c263716fcd85"
 dependencies = [
  "backtrace",
  "cc",
@@ -5010,6 +5010,7 @@ dependencies = [
  "cache_control",
  "chrono",
  "clap 4.5.7",
+ "data-url",
  "deno_ast",
  "deno_cache_dir",
  "deno_graph",
