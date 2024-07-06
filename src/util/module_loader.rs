@@ -8,8 +8,11 @@ use deno_core::error::generic_error;
 use deno_runtime::deno_permissions::PermissionsContainer;
 use deno_core::futures::FutureExt;
 use import_map::ImportMap;
+use data_url::DataUrl;
 
-use std::path::Path;
+use mtsc::util::OptionSource;
+
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::util::{self, FileFetcher};
@@ -49,11 +52,15 @@ impl ModuleLoader for SJSModuleLoader {
 
       return ModuleLoadResponse::Async(
         async move {
-          let maybe_ext = Path::new(&module_specifier.path()).extension().map(|ext| ext.to_string_lossy().to_lowercase());
+          let opt_source = match module_specifier.scheme() {
+            "data" => OptionSource::Mime(DataUrl::process(module_specifier.as_str()).map_err(|_| generic_error("URL has scheme \"data\" but is not a valid Data Url"))?.mime_type().to_string()),
+            "file" | "http" | "https" => OptionSource::Path(PathBuf::from(module_specifier.path().to_string())),
+            "sjs" | "blob" | _ => OptionSource::None
+          };
 
           let mut mtsc_options = mtsc::Options {
             module: true,
-            preprocess: true,
+            preprocess: false,
             transpile: false,
             filename: Some(module_specifier.clone().into()),
             macros,
@@ -61,19 +68,29 @@ impl ModuleLoader for SJSModuleLoader {
             ..Default::default()
           };
 
-          let module_type = if let Some(ext) = maybe_ext {
-            mtsc::util::update_options_by_ext(ext.clone(), &mut mtsc_options, &mtsc::util::all_ext_options());
+          mtsc::util::update_options(opt_source.clone(), &mut mtsc_options, &mtsc::util::all_options());
 
-            match ext.as_str() {
-              "json" => ModuleType::Json,
-              _ => match &requested_module_type {
-                RequestedModuleType::Other(ty) => ModuleType::Other(ty.clone()),
-                _ => ModuleType::JavaScript,
-              }
-            }
-          } else {
-            ModuleType::JavaScript
-          };
+          if opt_source == OptionSource::None {
+            mtsc_options.preprocess = true;
+            mtsc_options.transpile = true;
+          }
+
+          let module_type = match &opt_source {
+            OptionSource::Mime(mime_type) => match mime_type.as_str() {
+              "application/json" => Some(ModuleType::Json),
+              "application/wasm" => Some(ModuleType::Wasm),
+              _ => None
+            },
+            OptionSource::Path(path) => path.extension().and_then(|ext| ext.to_str()).and_then(|ext| match ext {
+              "json" => Some(ModuleType::Json),
+              "wasm" => Some(ModuleType::Wasm),
+              _ => None
+            }),
+            _ => None
+          }.unwrap_or_else(|| match &requested_module_type {
+            RequestedModuleType::Other(ty) => ModuleType::Other(ty.clone()),
+            _ => ModuleType::JavaScript,
+          });
 
           if module_type == ModuleType::Json && requested_module_type != RequestedModuleType::Json {
             return Err(generic_error("Attempted to load JSON module without specifying \"type\": \"json\" attribute in the import statement"));
