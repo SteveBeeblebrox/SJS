@@ -33,6 +33,7 @@ impl<T: Deref<Target=Path>> ToAbsolutePath for T {
 }
 
 pub trait GetSubExtension : sealed::Sealed {
+    #[allow(unused)]
     fn sub_extension(&self) -> Option<&OsStr>;
 }
 
