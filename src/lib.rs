@@ -26,6 +26,18 @@ use util::path::ToAbsolutePath as _;
 static STARTUP_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/STARTUP_SNAPSHOT.bin"));
 
+pub fn init_v8() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        // deno_core has no option to skip init, but mtsc does via init_v8(primary: false);
+        // however, mtsc's SHARED_RUNTIME needs to be created before any deno_core JSRuntimes,
+        // so use deno_core's init_platform then let force mtsc to initialize its runtime
+        deno_core::JsRuntime::init_platform(None);
+        mtsc::init_v8(false);
+    });
+}
+
 #[derive(Clone)]
 pub enum ScriptSource {
     File(String),
@@ -183,6 +195,8 @@ pub fn get_temp_directory() -> PathBuf {
 }
 
 pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, import_map: Option<ImportMap>, inspector_options: InspectorOptions) -> Result<(), AnyError> {
+    init_v8();
+
     let args0 = match input.clone() {
         ScriptSource::File(source_path) => Path::new(&source_path).absolute().map(|x| String::from(x.into_os_string().into_string().unwrap())).map_err(|x| format!("{}: {}",source_path,x)).or_panic(),
         ScriptSource::URL(source_url) => source_url,
