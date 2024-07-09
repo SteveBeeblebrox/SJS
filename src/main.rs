@@ -94,7 +94,7 @@ OPTIONS:
         .arg(Arg::new("import-map")
             .short('m')
             .long("import-map")
-            .help("Load a JSON formatted import map (By default tries to load 'imports.js')")
+            .help("Load a JSON formatted import map (By default tries to load 'imports.json')")
             .value_name("PATH")
             .num_args(1)
             .action(ArgAction::Set)
