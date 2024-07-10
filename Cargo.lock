@@ -3400,7 +3400,6 @@ checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
 [[package]]
 name = "mtsc"
 version = "5.5.3"
-source = "git+https://github.com/SteveBeeblebrox/mtsc.git#7b34edd1ba00e5b0818eef3869038792a15b91ba"
 dependencies = [
  "backtrace",
  "cc",
@@ -3408,6 +3407,7 @@ dependencies = [
  "clap 2.34.0",
  "cxx",
  "cxx-build",
+ "deno_core",
  "fancy-default",
  "html5ever",
  "or_panic",
@@ -3415,7 +3415,6 @@ dependencies = [
  "reqwest",
  "same-file",
  "tokio",
- "v8",
 ]
 
 [[package]]
