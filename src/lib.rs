@@ -27,8 +27,15 @@ static STARTUP_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/STARTUP_SNAPSHOT.bin"));
 
 pub fn init_v8() {
-    // Ensure mtsc's runtime is the first created
-    mtsc::init_v8();
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        // deno_core has no option to skip init, but mtsc does via init_v8(primary: false);
+        // however, mtsc's SHARED_RUNTIME needs to be created before any deno_core JSRuntimes,
+        // so use deno_core's init_platform then let force mtsc to initialize its runtime
+        deno_core::JsRuntime::init_platform(None);
+        mtsc::init_v8(false);
+    });
 }
 
 #[derive(Clone)]
