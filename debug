@@ -1,0 +1,3 @@
+#!/bin/bash
+V8_FORCE_DEBUG=true cargo run -- "$@";
+echo "Exit Status: $?";
