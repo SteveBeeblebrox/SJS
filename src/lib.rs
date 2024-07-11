@@ -20,12 +20,17 @@ use velcro::vec;
 use or_panic::OrPanic;
 
 mod util;
+pub use util::url::{Url,resolve_maybe_url};
 use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting,BasicRootCertStoreProvider,AnyError};
 use util::path::ToAbsolutePath as _;
 
 static STARTUP_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/STARTUP_SNAPSHOT.bin"));
 
+pub fn version() -> &'static str {
+    return env!("CARGO_PKG_VERSION");
+}
+    
 pub fn init_v8() {
     use std::sync::Once;
     static INIT: Once = Once::new();
