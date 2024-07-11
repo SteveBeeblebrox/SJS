@@ -1,5 +1,6 @@
 use deno_runtime::deno_core;
 use deno_core::{ModuleSpecifier,FeatureChecker,SharedArrayBufferStore,CompiledWasmModuleStore};
+use deno_core::error::generic_error;
 use deno_runtime::{BootstrapOptions, WorkerExecutionMode};
 use deno_runtime::deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_runtime::worker::{MainWorker, WorkerOptions};
@@ -20,9 +21,10 @@ use velcro::vec;
 use or_panic::OrPanic;
 
 mod util;
-pub use util::url::{Url,resolve_maybe_url};
-use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting,BasicRootCertStoreProvider,AnyError};
+pub use util::AnyError;
+use util::{FileFetcher,File,SJSModuleLoader,SJSCacheEnv,HttpClient,CacheSetting,BasicRootCertStoreProvider};
 use util::path::ToAbsolutePath as _;
+use util::url::resolve_maybe_url;
 
 static STARTUP_SNAPSHOT: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/STARTUP_SNAPSHOT.bin"));
@@ -199,7 +201,7 @@ pub fn get_temp_directory() -> PathBuf {
     std::env::temp_dir().join("sjs")
 }
 
-pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, import_map: Option<ImportMap>, inspector_options: InspectorOptions) -> Result<(), AnyError> {
+pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, include_paths: Vec<String>, allow_remote: bool, import_map_source: Option<String>, inspector_options: InspectorOptions) -> Result<(), AnyError> {
     init_v8();
 
     let args0 = match input.clone() {
@@ -239,7 +241,7 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
             ModuleSpecifier::parse(&source_url).or_panic()
         },
         ScriptSource::FileOrURL(source_path) => {
-            util::url::resolve_maybe_url(source_path).or_panic()
+            resolve_maybe_url(source_path).or_panic()
         }
     };
 
@@ -253,12 +255,13 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
             },
             _ => None
         },
+
+        import_map: create_import_map(file_fetcher.clone(), &main_module, import_map_source, true).await,
+        
         file_fetcher,
 
         macros,
         include_paths,
-
-        import_map,
 
         ..Default::default()
     });
@@ -320,13 +323,38 @@ pub async fn run(input: ScriptSource, args: Vec<String>, macros: Vec<String>, in
     Ok(())
 }
 
-pub fn create_import_map<P: AsRef<Path>>(path: P, expand_imports: bool) -> Result<ImportMap, AnyError> {
-    return Ok(import_map::parse_from_json_with_options(
-        &ModuleSpecifier::from_file_path(path.as_ref().absolute()?).map_err(|_| AnyError::msg("Invalid Url"))?,
-        std::fs::read_to_string(path)?.as_str(),
-        import_map::ImportMapOptions {
-            expand_imports,
-            ..Default::default()
-        }
-    )?.import_map);
+async fn create_import_map(file_fetcher: Arc<FileFetcher>, main_module: &ModuleSpecifier, maybe_import_map_source: Option<String>, expand_imports: bool) -> Option<ImportMap> {
+    async fn load(file_fetcher: Arc<FileFetcher>, main_module: &ModuleSpecifier, maybe_import_map_source: Option<String>, expand_imports: bool) -> Result<ImportMap,AnyError> {
+        let specifier = match maybe_import_map_source {
+            Some(import_map_source) => resolve_maybe_url(import_map_source)?,
+            None => {
+                match main_module.scheme() {
+                    "file" | "http" | "https" => {
+                        let mut specifier = main_module.clone();
+                        let path = Path::new(specifier.path()).with_file_name("imports.json");
+                        specifier.set_path(path.to_str().unwrap());
+                        specifier
+                    },
+                    "data" | "sjs" | "blob" | _ => resolve_maybe_url("./imports.json")?
+                }
+            }
+        };
+
+        let text = file_fetcher.fetch(&specifier, PermissionsContainer::allow_all()).await.map_err(|x| generic_error(format!("{}: {}",specifier,x)))?.source.clone();
+
+        return Ok(import_map::parse_from_json_with_options(
+            &specifier,
+            std::str::from_utf8(&text)?,
+            import_map::ImportMapOptions {
+                expand_imports,
+                ..Default::default()
+            }
+        )?.import_map);
+    }
+
+    return match load(file_fetcher, main_module, maybe_import_map_source.clone(), expand_imports).await {
+        Ok(imports) => Some(imports),
+        Err(_) if maybe_import_map_source.is_none() => None,
+        Err(x) => panic!("{}: {}", maybe_import_map_source.unwrap(), x)
+    };
 }

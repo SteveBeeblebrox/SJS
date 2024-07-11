@@ -147,15 +147,12 @@ OPTIONS:
         _ => None
     };
 
-    let import_map = match matches.get_one::<String>("import-map") {
-        Some(path) => Some(sjs::create_import_map(path, true).map_err(|x| format!("{}: {}", path, x)).or_panic()),
-        None => sjs::create_import_map("./imports.json", true).ok()
-    };
+    let import_map_source = matches.get_one::<String>("import-map").map(|s| s.clone());
     
     let macros = matches.get_many::<String>("macros").map(|x| x.cloned().collect()).unwrap_or(vec![]);
     let include_paths = matches.get_many::<String>("include-paths").map(|x| x.cloned().collect()).unwrap_or(vec![]);
 
-    sjs::run(source, args, macros, include_paths, matches.get_flag("remote"), import_map, InspectorOptions {
+    sjs::run(source, args, macros, include_paths, matches.get_flag("remote"), import_map_source, InspectorOptions {
         wait: matches.get_flag("inspect"),
         port
     }).await.or_panic();
