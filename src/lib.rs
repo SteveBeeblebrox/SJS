@@ -38,8 +38,11 @@ pub fn init_v8() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         // deno_core has no option to skip init, but mtsc does via init_v8(primary: false);
-        // however, mtsc's SHARED_RUNTIME needs to be created before any deno_core JSRuntimes,
-        // so use deno_core's init_platform then let force mtsc to initialize its runtime
+        // however, mtsc's TLS_RUNTIME on the main thread needs to be created before any
+        // deno_core JSRuntimes, so use deno_core's init_platform then force mtsc to initialize
+        // its runtime. mtsc's TLS_RUNTIME also needs to be initialized on any worker threads
+        // before creating the workers's runtimes themselves. This is done at the start of the
+        // web worker callback.
         deno_core::JsRuntime::init_platform(None);
         mtsc::init_v8(false);
     });
@@ -140,6 +143,8 @@ fn create_feature_checker(unstable_features: &Vec<i32>) -> Arc<FeatureChecker> {
 fn create_web_worker_callback(shared: Arc<SharedState>) -> Arc<deno_runtime::ops::worker_host::CreateWebWorkerCb> {
     Arc::new(move |args| {
         use deno_runtime::web_worker::{WebWorker,WebWorkerOptions};
+        
+        mtsc::init_v8(false);
 
         let options = WebWorkerOptions {
             bootstrap: BootstrapOptions {
